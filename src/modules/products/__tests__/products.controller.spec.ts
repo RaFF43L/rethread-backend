@@ -21,7 +21,7 @@ const makeProduct = (overrides: Partial<Product> = {}): Product =>
     codigoIdentificacao: 'codigo-uuid',
     cor: 'blue',
     marca: 'Nike',
-    urlS3: 'https://s3.example.com/img.jpg',
+    images: [],
     status: ProductStatus.AVAILABLE,
     descricao: 'A shoe',
     preco: 199.99,
@@ -46,25 +46,23 @@ describe('ProductsController', () => {
   });
 
   describe('create', () => {
-    it('should call productsService.create with the dto and file', async () => {
+    it('should call productsService.create with the dto and files', async () => {
       const dto: CreateProductDto = {
         cor: 'blue',
         marca: 'Nike',
         descricao: 'A shoe',
         preco: 199.99,
       };
-      const file: MulterFile = {
-        originalname: 'shoe.jpg',
-        mimetype: 'image/jpeg',
-        buffer: Buffer.from('fake-image'),
-      };
+      const files: MulterFile[] = [
+        { originalname: 'shoe.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('fake-image') },
+      ];
       const product = makeProduct();
       mockProductsService.create.mockResolvedValue(product);
 
-      const result = await controller.create(dto, file);
+      const result = await controller.create(dto, files);
 
       expect(result).toEqual(product);
-      expect(mockProductsService.create).toHaveBeenCalledWith(dto, file);
+      expect(mockProductsService.create).toHaveBeenCalledWith(dto, files);
     });
   });
 

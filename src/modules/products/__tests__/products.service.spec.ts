@@ -5,6 +5,7 @@ import { CustomError } from '../../../common/errors/custom-error';
 import { MulterFile, S3Service } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
+import { ProductImage } from '../entities/product-image.entity';
 import { Product, ProductStatus } from '../entities/product.entity';
 import { ProductsService } from '../products.service';
 
@@ -16,16 +17,23 @@ const mockRepository = {
   softRemove: jest.fn(),
 };
 
+const mockImageRepository = {
+  create: jest.fn(),
+  save: jest.fn(),
+};
+
 const mockS3Service = {
   uploadFile: jest.fn(),
   getPublicUrl: jest.fn(),
 };
 
-const mockFile: MulterFile = {
-  originalname: 'shoe.jpg',
-  mimetype: 'image/jpeg',
-  buffer: Buffer.from('fake-image'),
-};
+const mockFiles: MulterFile[] = [
+  { originalname: 'shoe1.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('fake-image-1') },
+  { originalname: 'shoe2.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('fake-image-2') },
+];
+
+const makeImage = (overrides: Partial<ProductImage> = {}): ProductImage =>
+  ({ id: 1, urlS3: 'products/img.jpg', product: {} as Product, ...overrides }) as ProductImage;
 
 const makeProduct = (overrides: Partial<Product> = {}): Product =>
   ({
@@ -33,7 +41,7 @@ const makeProduct = (overrides: Partial<Product> = {}): Product =>
     codigoIdentificacao: 'codigo-uuid',
     cor: 'blue',
     marca: 'Nike',
-    urlS3: 'https://s3.example.com/img.jpg',
+    images: [makeImage()],
     status: ProductStatus.AVAILABLE,
     descricao: 'A shoe',
     preco: 199.99,
@@ -53,6 +61,7 @@ describe('ProductsService', () => {
       providers: [
         ProductsService,
         { provide: getRepositoryToken(Product), useValue: mockRepository },
+        { provide: getRepositoryToken(ProductImage), useValue: mockImageRepository },
         { provide: S3Service, useValue: mockS3Service },
       ],
     }).compile();
@@ -61,7 +70,7 @@ describe('ProductsService', () => {
   });
 
   describe('create', () => {
-    it('should upload image to S3 and return the saved product', async () => {
+    it('should upload images to S3 and return the saved product', async () => {
       const dto: CreateProductDto = {
         cor: 'blue',
         marca: 'Nike',
@@ -69,27 +78,28 @@ describe('ProductsService', () => {
         preco: 199.99,
       };
       const s3Key = 'products/uuid-generated.jpg';
-      const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/uuid-generated.jpg';
+      const publicUrl =
+        'https://rethread-prod.s3.us-east-1.amazonaws.com/products/uuid-generated.jpg';
       const product = makeProduct();
+      const image = makeImage({ urlS3: s3Key });
 
       mockS3Service.uploadFile.mockResolvedValue(s3Key);
       mockS3Service.getPublicUrl.mockReturnValue(publicUrl);
       mockRepository.create.mockReturnValue(product);
       mockRepository.save.mockResolvedValue(product);
+      mockImageRepository.create.mockReturnValue(image);
+      mockImageRepository.save.mockResolvedValue(image);
 
-      const result = await service.create(dto, mockFile);
+      const result = await service.create(dto, mockFiles);
 
-      expect(mockS3Service.uploadFile).toHaveBeenCalledWith(
-        mockFile,
-        expect.stringMatching(/^products\/.+/),
-      );
+      expect(mockS3Service.uploadFile).toHaveBeenCalledTimes(mockFiles.length);
       expect(mockRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ cor: 'blue', urlS3: s3Key, status: ProductStatus.AVAILABLE }),
+        expect.objectContaining({ cor: 'blue', status: ProductStatus.AVAILABLE }),
       );
-      expect(result).toEqual({ ...product, imageUrl: publicUrl });
+      expect(result.imageUrls).toEqual([publicUrl, publicUrl]);
     });
 
-    it('should throw CustomError with BAD_REQUEST when no file is provided', async () => {
+    it('should throw CustomError with BAD_REQUEST when no files are provided', async () => {
       const dto: CreateProductDto = {
         cor: 'blue',
         marca: 'Nike',
@@ -97,8 +107,8 @@ describe('ProductsService', () => {
         preco: 199.99,
       };
 
-      await expect(service.create(dto, null as unknown as MulterFile)).rejects.toThrow(CustomError);
-      await expect(service.create(dto, null as unknown as MulterFile)).rejects.toMatchObject({
+      await expect(service.create(dto, [])).rejects.toThrow(CustomError);
+      await expect(service.create(dto, [])).rejects.toMatchObject({
         status: HttpStatus.BAD_REQUEST,
       });
     });
@@ -155,7 +165,7 @@ describe('ProductsService', () => {
   });
 
   describe('findById', () => {
-    it('should return a product with imageUrl', async () => {
+    it('should return a product with imageUrls', async () => {
       const product = makeProduct();
       const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
       mockRepository.findOne.mockResolvedValue(product);
@@ -163,8 +173,8 @@ describe('ProductsService', () => {
 
       const result = await service.findById(1);
 
-      expect(result).toEqual({ ...product, imageUrl: publicUrl });
-      expect(mockS3Service.getPublicUrl).toHaveBeenCalledWith(product.urlS3);
+      expect(result.imageUrls).toEqual([publicUrl]);
+      expect(mockS3Service.getPublicUrl).toHaveBeenCalledWith(product.images[0].urlS3);
     });
 
     it('should throw CustomError with NOT_FOUND if product does not exist', async () => {
@@ -178,7 +188,7 @@ describe('ProductsService', () => {
   });
 
   describe('findByCodigoIdentificacao', () => {
-    it('should return a product with imageUrl', async () => {
+    it('should return a product with imageUrls', async () => {
       const product = makeProduct();
       const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
       mockRepository.findOne.mockResolvedValue(product);
@@ -186,16 +196,19 @@ describe('ProductsService', () => {
 
       const result = await service.findByCodigoIdentificacao(product.codigoIdentificacao);
 
-      expect(result).toEqual({ ...product, imageUrl: publicUrl });
+      expect(result.imageUrls).toEqual([publicUrl]);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { codigoIdentificacao: product.codigoIdentificacao },
+        relations: ['images'],
       });
     });
 
     it('should throw CustomError with NOT_FOUND if product does not exist', async () => {
       mockRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findByCodigoIdentificacao('non-existent-uuid')).rejects.toThrow(CustomError);
+      await expect(service.findByCodigoIdentificacao('non-existent-uuid')).rejects.toThrow(
+        CustomError,
+      );
       await expect(service.findByCodigoIdentificacao('non-existent-uuid')).rejects.toMatchObject({
         status: HttpStatus.NOT_FOUND,
       });
@@ -203,7 +216,7 @@ describe('ProductsService', () => {
   });
 
   describe('findPaginated', () => {
-    it('should return paginated products with imageUrl', async () => {
+    it('should return paginated products with imageUrls', async () => {
       const products = [makeProduct({ id: 1 }), makeProduct({ id: 2 })];
       const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
       mockRepository.findAndCount.mockResolvedValue([products, 2]);
@@ -212,7 +225,7 @@ describe('ProductsService', () => {
       const dto: PaginateProductsDto = { page: 1, limit: 10 };
       const result = await service.findPaginated(dto);
 
-      expect(result.data).toEqual(products.map((p) => ({ ...p, imageUrl: publicUrl })));
+      expect(result.data[0].imageUrls).toEqual([publicUrl]);
       expect(result.total).toBe(2);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
@@ -220,6 +233,7 @@ describe('ProductsService', () => {
         skip: 0,
         take: 10,
         order: { createdAt: 'DESC' },
+        relations: ['images'],
       });
     });
 

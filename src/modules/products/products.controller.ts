@@ -1,4 +1,4 @@
-import { Body, Controller, Param, ParseIntPipe, Query, UploadedFile } from '@nestjs/common';
+import { Body, Controller, Param, ParseIntPipe, Query, UploadedFiles } from '@nestjs/common';
 import type { MulterFile } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { PaginateProductsDto } from './dto/paginate-products.dto';
@@ -19,8 +19,8 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @CreateProductRoute()
-  create(@Body() dto: CreateProductDto, @UploadedFile() file: MulterFile) {
-    return this.productsService.create(dto, file);
+  create(@Body() dto: CreateProductDto, @UploadedFiles() files: MulterFile[]) {
+    return this.productsService.create(dto, files);
   }
 
   @SellProductRoute()

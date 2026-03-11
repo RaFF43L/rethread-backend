@@ -3,9 +3,11 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ProductImage } from './product-image.entity';
 
 export enum ProductStatus {
   AVAILABLE = 'available',
@@ -26,8 +28,8 @@ export class Product {
   @Column()
   marca!: string;
 
-  @Column({ name: 'url_s3' })
-  urlS3!: string;
+  @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })
+  images!: ProductImage[];
 
   @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.AVAILABLE })
   status!: ProductStatus;

@@ -7,6 +7,7 @@ import { MulterFile, S3Service } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { PaginateProductsDto } from './dto/paginate-products.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
+import { ProductImage } from './entities/product-image.entity';
 import { Product, ProductStatus } from './entities/product.entity';
 
 export interface PaginatedResult<T> {
@@ -21,16 +22,17 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(ProductImage)
+    private readonly productImageRepository: Repository<ProductImage>,
     private readonly s3Service: S3Service,
   ) {}
 
-  async create(dto: CreateProductDto, file: MulterFile): Promise<ProductResponseDto> {
-    if (!file) {
-      throw new CustomError('Product image is required.', HttpStatus.BAD_REQUEST);
+  async create(dto: CreateProductDto, files: MulterFile[]): Promise<ProductResponseDto> {
+    if (!files || files.length === 0) {
+      throw new CustomError('At least one product image is required.', HttpStatus.BAD_REQUEST);
     }
 
     const codigoIdentificacao = randomUUID();
-    const urlS3 = await this.s3Service.uploadFile(file, `products/${codigoIdentificacao}`);
 
     const product = this.productRepository.create({
       cor: dto.cor,
@@ -38,12 +40,22 @@ export class ProductsService {
       descricao: dto.descricao,
       preco: dto.preco,
       codigoIdentificacao,
-      urlS3,
       status: ProductStatus.AVAILABLE,
     });
 
     const saved = await this.productRepository.save(product);
-    return this.attachImageUrl(saved);
+
+    const images = await Promise.all(
+      files.map(async (file) => {
+        const urlS3 = await this.s3Service.uploadFile(file, `products/${codigoIdentificacao}`);
+        return this.productImageRepository.save(
+          this.productImageRepository.create({ product: saved, urlS3 }),
+        );
+      }),
+    );
+
+    saved.images = images;
+    return this.attachImageUrls(saved);
   }
 
   async sell(id: number): Promise<Product> {
@@ -65,17 +77,20 @@ export class ProductsService {
 
   async findById(id: number): Promise<ProductResponseDto> {
     const product = await this.findOneOrFail(id);
-    return this.attachImageUrl(product);
+    return this.attachImageUrls(product);
   }
 
   async findByCodigoIdentificacao(codigoIdentificacao: string): Promise<ProductResponseDto> {
-    const product = await this.productRepository.findOne({ where: { codigoIdentificacao } });
+    const product = await this.productRepository.findOne({
+      where: { codigoIdentificacao },
+      relations: ['images'],
+    });
 
     if (!product) {
       throw new CustomError('Product not found.', HttpStatus.NOT_FOUND);
     }
 
-    return this.attachImageUrl(product);
+    return this.attachImageUrls(product);
   }
 
   async findPaginated(dto: PaginateProductsDto): Promise<PaginatedResult<ProductResponseDto>> {
@@ -85,20 +100,24 @@ export class ProductsService {
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
+      relations: ['images'],
     });
 
-    const data = products.map((p) => this.attachImageUrl(p));
+    const data = products.map((p) => this.attachImageUrls(p));
 
     return { data, total, page, limit };
   }
 
-  private attachImageUrl(product: Product): ProductResponseDto {
-    const imageUrl = this.s3Service.getPublicUrl(product.urlS3);
-    return { ...product, imageUrl };
+  private attachImageUrls(product: Product): ProductResponseDto {
+    const imageUrls = (product.images ?? []).map((img) => this.s3Service.getPublicUrl(img.urlS3));
+    return { ...product, imageUrls };
   }
 
   private async findOneOrFail(id: number): Promise<Product> {
-    const product = await this.productRepository.findOne({ where: { id } });
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: ['images'],
+    });
 
     if (!product) {
       throw new CustomError('Product not found.', HttpStatus.NOT_FOUND);

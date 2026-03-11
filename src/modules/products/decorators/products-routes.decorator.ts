@@ -8,7 +8,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
@@ -25,19 +25,22 @@ export const CreateProductRoute = () =>
   applyDecorators(
     Post(),
     HttpCode(HttpStatus.CREATED),
-    UseInterceptors(FileInterceptor('image')),
+    UseInterceptors(FilesInterceptor('images', 10)),
     ApiOperation({ summary: 'Create a new product' }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
       schema: {
         type: 'object',
-        required: ['cor', 'marca', 'descricao', 'preco', 'image'],
+        required: ['cor', 'marca', 'descricao', 'preco', 'images'],
         properties: {
           cor: { type: 'string', example: 'blue' },
           marca: { type: 'string', example: 'Nike' },
           descricao: { type: 'string', example: 'A great shoe' },
           preco: { type: 'number', example: 199.99 },
-          image: { type: 'string', format: 'binary' },
+          images: {
+            type: 'array',
+            items: { type: 'string', format: 'binary' },
+          },
         },
       },
     }),
