@@ -1,0 +1,131 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { MulterFile } from '../../../common/services/s3.service';
+import { CreateProductDto } from '../dto/create-product.dto';
+import { PaginateProductsDto } from '../dto/paginate-products.dto';
+import { Product, ProductStatus } from '../entities/product.entity';
+import { ProductsController } from '../products.controller';
+import { PaginatedResult, ProductsService } from '../products.service';
+
+const mockProductsService = {
+  create: jest.fn(),
+  sell: jest.fn(),
+  remove: jest.fn(),
+  findById: jest.fn(),
+  findByCodigoIdentificacao: jest.fn(),
+  findPaginated: jest.fn(),
+};
+
+const makeProduct = (overrides: Partial<Product> = {}): Product =>
+  ({
+    id: 1,
+    codigoIdentificacao: 'codigo-uuid',
+    cor: 'blue',
+    marca: 'Nike',
+    urlS3: 'https://s3.example.com/img.jpg',
+    status: ProductStatus.AVAILABLE,
+    descricao: 'A shoe',
+    preco: 199.99,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+    ...overrides,
+  }) as Product;
+
+describe('ProductsController', () => {
+  let controller: ProductsController;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ProductsController],
+      providers: [{ provide: ProductsService, useValue: mockProductsService }],
+    }).compile();
+
+    controller = module.get<ProductsController>(ProductsController);
+  });
+
+  describe('create', () => {
+    it('should call productsService.create with the dto and file', async () => {
+      const dto: CreateProductDto = {
+        cor: 'blue',
+        marca: 'Nike',
+        descricao: 'A shoe',
+        preco: 199.99,
+      };
+      const file: MulterFile = {
+        originalname: 'shoe.jpg',
+        mimetype: 'image/jpeg',
+        buffer: Buffer.from('fake-image'),
+      };
+      const product = makeProduct();
+      mockProductsService.create.mockResolvedValue(product);
+
+      const result = await controller.create(dto, file);
+
+      expect(result).toEqual(product);
+      expect(mockProductsService.create).toHaveBeenCalledWith(dto, file);
+    });
+  });
+
+  describe('sell', () => {
+    it('should call productsService.sell with the id', async () => {
+      const product = makeProduct({ status: ProductStatus.SOLD });
+      mockProductsService.sell.mockResolvedValue(product);
+
+      const result = await controller.sell(1);
+
+      expect(result).toEqual(product);
+      expect(mockProductsService.sell).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('remove', () => {
+    it('should call productsService.remove with the id', async () => {
+      mockProductsService.remove.mockResolvedValue(undefined);
+
+      await controller.remove(1);
+
+      expect(mockProductsService.remove).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findById', () => {
+    it('should call productsService.findById with the id', async () => {
+      const product = makeProduct();
+      mockProductsService.findById.mockResolvedValue(product);
+
+      const result = await controller.findById(1);
+
+      expect(result).toEqual(product);
+      expect(mockProductsService.findById).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('findByCodigoIdentificacao', () => {
+    it('should call productsService.findByCodigoIdentificacao with the uuid', async () => {
+      const product = makeProduct();
+      mockProductsService.findByCodigoIdentificacao.mockResolvedValue(product);
+
+      const result = await controller.findByCodigoIdentificacao(product.codigoIdentificacao);
+
+      expect(result).toEqual(product);
+      expect(mockProductsService.findByCodigoIdentificacao).toHaveBeenCalledWith(
+        product.codigoIdentificacao,
+      );
+    });
+  });
+
+  describe('findPaginated', () => {
+    it('should call productsService.findPaginated with the dto', async () => {
+      const dto: PaginateProductsDto = { page: 1, limit: 20 };
+      const paginated: PaginatedResult<Product> = { data: [], total: 0, page: 1, limit: 20 };
+      mockProductsService.findPaginated.mockResolvedValue(paginated);
+
+      const result = await controller.findPaginated(dto);
+
+      expect(result).toEqual(paginated);
+      expect(mockProductsService.findPaginated).toHaveBeenCalledWith(dto);
+    });
+  });
+});
