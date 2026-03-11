@@ -37,8 +37,7 @@ export class S3Service {
 
     this.bucket = bucket;
     this.publicBaseUrl =
-      config.get<string>('AWS_PUBLIC_URL') ||
-      `https://${bucket}.s3.${region}.amazonaws.com`;
+      config.get<string>('AWS_PUBLIC_URL') || `https://${bucket}.s3.${region}.amazonaws.com`;
   }
 
   async uploadBase64File(base64: string, folderPath: string, fileName: string): Promise<string> {
@@ -82,8 +81,8 @@ export class S3Service {
   }
 
   async uploadFile(file: MulterFile, folderPath: string): Promise<string> {
-    const extension = file.originalname.split('.').pop() ?? '';
-    const fileKey = `${folderPath}.${extension}`;
+    const sanitizedName = file.originalname.split('/').pop() ?? file.originalname;
+    const fileKey = `${folderPath}/${sanitizedName}`;
 
     await this.s3Client.send(
       new PutObjectCommand({

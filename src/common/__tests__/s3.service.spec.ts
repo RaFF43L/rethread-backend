@@ -125,7 +125,7 @@ describe('S3Service', () => {
 
       const result = await service.uploadFile(multerFile, 'products/photo');
 
-      expect(result).toBe('products/photo.jpg');
+      expect(result).toBe('products/photo/photo.jpg');
     });
   });
 
