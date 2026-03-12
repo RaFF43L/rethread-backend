@@ -5,13 +5,17 @@ export class InitialSchema1773326942567 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TYPE "public"."products_status_enum" AS ENUM('available', 'sold')`,
+      `DO $$ BEGIN
+        CREATE TYPE "public"."products_status_enum" AS ENUM('available', 'sold');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
     );
     await queryRunner.query(
-      `CREATE TYPE "public"."products_category_enum" AS ENUM('calca', 'blusa', 'camiseta', 'short', 'vestido')`,
+      `DO $$ BEGIN
+        CREATE TYPE "public"."products_category_enum" AS ENUM('calca', 'blusa', 'camiseta', 'short', 'vestido');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
     );
     await queryRunner.query(`
-      CREATE TABLE "products" (
+      CREATE TABLE IF NOT EXISTS "products" (
         "id" SERIAL NOT NULL,
         "codigo_identificacao" uuid NOT NULL,
         "cor" character varying NOT NULL,
@@ -29,7 +33,7 @@ export class InitialSchema1773326942567 implements MigrationInterface {
       )
     `);
     await queryRunner.query(`
-      CREATE TABLE "product_images" (
+      CREATE TABLE IF NOT EXISTS "product_images" (
         "id" SERIAL NOT NULL,
         "url_s3" character varying NOT NULL,
         "productId" integer,
@@ -37,10 +41,32 @@ export class InitialSchema1773326942567 implements MigrationInterface {
       )
     `);
     await queryRunner.query(`
-      ALTER TABLE "product_images"
-        ADD CONSTRAINT "FK_product_images_product"
-        FOREIGN KEY ("productId") REFERENCES "products"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION
+      DO $$ BEGIN
+        ALTER TABLE "product_images"
+          ADD CONSTRAINT "FK_product_images_product"
+          FOREIGN KEY ("productId") REFERENCES "products"("id")
+          ON DELETE CASCADE ON UPDATE NO ACTION;
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$
+    `);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='products' AND column_name='category'
+        ) THEN
+          ALTER TABLE "products" ADD "category" "public"."products_category_enum" NOT NULL;
+        END IF;
+      END $$
+    `);
+    await queryRunner.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='products' AND column_name='size'
+        ) THEN
+          ALTER TABLE "products" ADD "size" character varying NOT NULL;
+        END IF;
+      END $$
     `);
   }
 
