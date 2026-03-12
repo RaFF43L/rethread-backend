@@ -18,6 +18,61 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { ProductCategory, ProductStatus } from '../entities/product.entity';
+
+const productSchema: SchemaObject = {
+  type: 'object',
+  properties: {
+    id: { type: 'integer', example: 1 },
+    codigoIdentificacao: {
+      type: 'string',
+      format: 'uuid',
+      example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    },
+    cor: { type: 'string', example: 'blue' },
+    marca: { type: 'string', example: 'Nike' },
+    category: {
+      type: 'string',
+      enum: Object.values(ProductCategory),
+      example: ProductCategory.CALCA,
+    },
+    size: { type: 'string', example: 'M' },
+    status: {
+      type: 'string',
+      enum: Object.values(ProductStatus),
+      example: ProductStatus.AVAILABLE,
+    },
+    descricao: { type: 'string', example: 'A great shoe' },
+    preco: { type: 'number', example: 199.99 },
+    imageUrls: {
+      type: 'array',
+      items: { type: 'string', example: 'https://bucket.s3.amazonaws.com/products/uuid/photo.jpg' },
+    },
+    createdAt: { type: 'string', format: 'date-time', example: '2026-03-12T00:00:00.000Z' },
+    updatedAt: { type: 'string', format: 'date-time', example: '2026-03-12T00:00:00.000Z' },
+    deletedAt: { type: 'string', format: 'date-time', nullable: true, example: null },
+  },
+};
+
+const paginatedProductSchema: SchemaObject = {
+  type: 'object',
+  properties: {
+    data: { type: 'array', items: productSchema },
+    total: { type: 'integer', example: 100 },
+    page: { type: 'integer', example: 1 },
+    limit: { type: 'integer', example: 20 },
+  },
+};
+
+const errorSchema = (statusCode: number, message: string, error: string): SchemaObject => ({
+  type: 'object',
+  properties: {
+    statusCode: { type: 'integer', example: statusCode },
+    message: { type: 'string', example: message },
+    error: { type: 'string', example: error },
+  },
+});
 
 export const ProductsTag = () => applyDecorators(ApiTags('Products'));
 
@@ -31,12 +86,18 @@ export const CreateProductRoute = () =>
     ApiBody({
       schema: {
         type: 'object',
-        required: ['cor', 'marca', 'descricao', 'preco', 'images'],
+        required: ['cor', 'marca', 'descricao', 'preco', 'category', 'size', 'images'],
         properties: {
           cor: { type: 'string', example: 'blue' },
           marca: { type: 'string', example: 'Nike' },
           descricao: { type: 'string', example: 'A great shoe' },
           preco: { type: 'number', example: 199.99 },
+          category: {
+            type: 'string',
+            enum: Object.values(ProductCategory),
+            example: ProductCategory.CALCA,
+          },
+          size: { type: 'string', example: 'M' },
           images: {
             type: 'array',
             items: { type: 'string', format: 'binary' },
@@ -44,8 +105,17 @@ export const CreateProductRoute = () =>
         },
       },
     }),
-    ApiResponse({ status: 201, description: 'Product created.' }),
-    ApiResponse({ status: 400, description: 'Image is required or invalid data.' }),
+    ApiResponse({ status: 201, description: 'Product created.', schema: productSchema }),
+    ApiResponse({
+      status: 400,
+      description: 'Image is required or invalid data.',
+      schema: errorSchema(400, 'At least one product image is required.', 'Bad Request'),
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
   );
 
 export const SellProductRoute = () =>
@@ -54,9 +124,46 @@ export const SellProductRoute = () =>
     HttpCode(HttpStatus.OK),
     ApiOperation({ summary: 'Mark a product as sold' }),
     ApiParam({ name: 'id', type: Number }),
-    ApiResponse({ status: 200, description: 'Product marked as sold.' }),
-    ApiResponse({ status: 404, description: 'Product not found.' }),
-    ApiResponse({ status: 409, description: 'Product already sold.' }),
+    ApiResponse({ status: 200, description: 'Product marked as sold.', schema: productSchema }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Product not found.',
+      schema: errorSchema(404, 'Product not found.', 'Not Found'),
+    }),
+    ApiResponse({
+      status: 409,
+      description: 'Product already sold.',
+      schema: errorSchema(409, 'Product is already sold.', 'Conflict'),
+    }),
+  );
+
+export const RevertSaleProductRoute = () =>
+  applyDecorators(
+    Patch(':id/revert-sale'),
+    HttpCode(HttpStatus.OK),
+    ApiOperation({ summary: 'Revert a product sale back to available' }),
+    ApiParam({ name: 'id', type: Number }),
+    ApiResponse({ status: 200, description: 'Product sale reverted.', schema: productSchema }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Product not found.',
+      schema: errorSchema(404, 'Product not found.', 'Not Found'),
+    }),
+    ApiResponse({
+      status: 409,
+      description: 'Product is not sold.',
+      schema: errorSchema(409, 'Product is not sold.', 'Conflict'),
+    }),
   );
 
 export const RemoveProductRoute = () =>
@@ -66,7 +173,16 @@ export const RemoveProductRoute = () =>
     ApiOperation({ summary: 'Soft delete a product' }),
     ApiParam({ name: 'id', type: Number }),
     ApiResponse({ status: 204, description: 'Product deleted.' }),
-    ApiResponse({ status: 404, description: 'Product not found.' }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Product not found.',
+      schema: errorSchema(404, 'Product not found.', 'Not Found'),
+    }),
   );
 
 export const FindByIdRoute = () =>
@@ -75,8 +191,17 @@ export const FindByIdRoute = () =>
     HttpCode(HttpStatus.OK),
     ApiOperation({ summary: 'Get a product by id' }),
     ApiParam({ name: 'id', type: Number }),
-    ApiResponse({ status: 200, description: 'Product found.' }),
-    ApiResponse({ status: 404, description: 'Product not found.' }),
+    ApiResponse({ status: 200, description: 'Product found.', schema: productSchema }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Product not found.',
+      schema: errorSchema(404, 'Product not found.', 'Not Found'),
+    }),
   );
 
 export const FindByCodigoIdentificacaoRoute = () =>
@@ -85,8 +210,17 @@ export const FindByCodigoIdentificacaoRoute = () =>
     HttpCode(HttpStatus.OK),
     ApiOperation({ summary: 'Get a product by codigoIdentificacao (UUID)' }),
     ApiParam({ name: 'codigoIdentificacao', type: String }),
-    ApiResponse({ status: 200, description: 'Product found.' }),
-    ApiResponse({ status: 404, description: 'Product not found.' }),
+    ApiResponse({ status: 200, description: 'Product found.', schema: productSchema }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Product not found.',
+      schema: errorSchema(404, 'Product not found.', 'Not Found'),
+    }),
   );
 
 export const FindPaginatedRoute = () =>
@@ -96,5 +230,105 @@ export const FindPaginatedRoute = () =>
     ApiOperation({ summary: 'List products with pagination' }),
     ApiQuery({ name: 'page', required: false, type: Number, example: 1 }),
     ApiQuery({ name: 'limit', required: false, type: Number, example: 20 }),
-    ApiResponse({ status: 200, description: 'Paginated list of products.' }),
+    ApiResponse({
+      status: 200,
+      description: 'Paginated list of products.',
+      schema: paginatedProductSchema,
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+  );
+
+export const FindGroupedByCategoriesRoute = () =>
+  applyDecorators(
+    Get('categories'),
+    HttpCode(HttpStatus.OK),
+    ApiOperation({ summary: 'List available products grouped by category' }),
+    ApiResponse({
+      status: 200,
+      description: 'Products grouped by category.',
+      schema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            category: {
+              type: 'string',
+              enum: Object.values(ProductCategory),
+              example: ProductCategory.CALCA,
+            },
+            products: { type: 'array', items: productSchema },
+          },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+  );
+
+export const FindPaginatedByCategoryRoute = () =>
+  applyDecorators(
+    Get('categories/:category'),
+    HttpCode(HttpStatus.OK),
+    ApiOperation({ summary: 'List available products paginated by category' }),
+    ApiParam({ name: 'category', enum: ProductCategory }),
+    ApiQuery({ name: 'page', required: false, type: Number, example: 1 }),
+    ApiQuery({ name: 'limit', required: false, type: Number, example: 20 }),
+    ApiResponse({
+      status: 200,
+      description: 'Paginated products for the given category.',
+      schema: paginatedProductSchema,
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Invalid category.',
+      schema: errorSchema(
+        400,
+        'Validation failed (enum value calca|blusa|camiseta|short|vestido expected)',
+        'Bad Request',
+      ),
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+  );
+
+export const FindFilteredRoute = () =>
+  applyDecorators(
+    Get('filter'),
+    HttpCode(HttpStatus.OK),
+    ApiOperation({
+      summary: 'Filter available products by category, size, color, brand and price range',
+    }),
+    ApiQuery({ name: 'category', required: false, enum: ProductCategory }),
+    ApiQuery({ name: 'size', required: false, type: String, example: 'M' }),
+    ApiQuery({ name: 'cor', required: false, type: String, example: 'blue' }),
+    ApiQuery({ name: 'marca', required: false, type: String, example: 'Nike' }),
+    ApiQuery({ name: 'precoMin', required: false, type: Number, example: 50 }),
+    ApiQuery({ name: 'precoMax', required: false, type: Number, example: 500 }),
+    ApiQuery({ name: 'page', required: false, type: Number, example: 1 }),
+    ApiQuery({ name: 'limit', required: false, type: Number, example: 20 }),
+    ApiResponse({
+      status: 200,
+      description: 'Filtered paginated products.',
+      schema: paginatedProductSchema,
+    }),
+    ApiResponse({
+      status: 400,
+      description: 'Invalid query parameters.',
+      schema: errorSchema(400, 'precoMin must not be less than 0', 'Bad Request'),
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
   );

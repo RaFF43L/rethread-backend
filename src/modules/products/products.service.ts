@@ -1,14 +1,15 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { Between, ILike, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { CustomError } from '../../common/errors/custom-error';
 import { MulterFile, S3Service } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { FilterProductsDto } from './dto/filter-products.dto';
 import { PaginateProductsDto } from './dto/paginate-products.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
 import { ProductImage } from './entities/product-image.entity';
-import { Product, ProductStatus } from './entities/product.entity';
+import { Product, ProductCategory, ProductStatus } from './entities/product.entity';
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -39,6 +40,8 @@ export class ProductsService {
       marca: dto.marca,
       descricao: dto.descricao,
       preco: dto.preco,
+      category: dto.category,
+      size: dto.size,
       codigoIdentificacao,
       status: ProductStatus.AVAILABLE,
     });
@@ -70,6 +73,18 @@ export class ProductsService {
     return this.productRepository.save(product);
   }
 
+  async revertSale(id: number): Promise<Product> {
+    const product = await this.findOneOrFail(id);
+
+    if (product.status !== ProductStatus.SOLD) {
+      throw new CustomError('Product is not sold.', HttpStatus.CONFLICT);
+    }
+
+    product.status = ProductStatus.AVAILABLE;
+
+    return this.productRepository.save(product);
+  }
+
   async remove(id: number): Promise<void> {
     const product = await this.findOneOrFail(id);
     await this.productRepository.softRemove(product);
@@ -97,6 +112,74 @@ export class ProductsService {
     const { page, limit } = dto;
 
     const [products, total] = await this.productRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+      relations: ['images'],
+    });
+
+    const data = products.map((p) => this.attachImageUrls(p));
+
+    return { data, total, page, limit };
+  }
+
+  async findGroupedByCategories(): Promise<
+    { category: ProductCategory; products: ProductResponseDto[] }[]
+  > {
+    const products = await this.productRepository.find({
+      where: { status: ProductStatus.AVAILABLE },
+      order: { createdAt: 'DESC' },
+      relations: ['images'],
+    });
+
+    return Object.values(ProductCategory).map((category) => ({
+      category,
+      products: products.filter((p) => p.category === category).map((p) => this.attachImageUrls(p)),
+    }));
+  }
+
+  async findPaginatedByCategory(
+    category: ProductCategory,
+    dto: PaginateProductsDto,
+  ): Promise<PaginatedResult<ProductResponseDto>> {
+    const { page, limit } = dto;
+
+    const [products, total] = await this.productRepository.findAndCount({
+      where: { category, status: ProductStatus.AVAILABLE },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { createdAt: 'DESC' },
+      relations: ['images'],
+    });
+
+    const data = products.map((p) => this.attachImageUrls(p));
+
+    return { data, total, page, limit };
+  }
+
+  async findFiltered(dto: FilterProductsDto): Promise<PaginatedResult<ProductResponseDto>> {
+    const { page, limit, size, cor, marca, precoMin, precoMax, category } = dto;
+
+    const priceWhere =
+      precoMin !== undefined && precoMax !== undefined
+        ? Between(precoMin, precoMax)
+        : precoMin !== undefined
+          ? MoreThanOrEqual(precoMin)
+          : precoMax !== undefined
+            ? LessThanOrEqual(precoMax)
+            : undefined;
+
+    const where = {
+      status: ProductStatus.AVAILABLE,
+      ...(category !== undefined && { category }),
+      ...(size !== undefined && { size }),
+      ...(cor !== undefined && { cor: ILike(`%${cor}%`) }),
+      ...(marca !== undefined && { marca: ILike(`%${marca}%`) }),
+      ...(priceWhere !== undefined && { preco: priceWhere }),
+    };
+
+    const [products, total] = await this.productRepository.findAndCount({
+      where,
       skip: (page - 1) * limit,
       take: limit,
       order: { createdAt: 'DESC' },
