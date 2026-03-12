@@ -4,15 +4,17 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { CustomError } from '../../../common/errors/custom-error';
 import { MulterFile, S3Service } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
+import { FilterProductsDto } from '../dto/filter-products.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { ProductImage } from '../entities/product-image.entity';
-import { Product, ProductStatus } from '../entities/product.entity';
+import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
 import { ProductsService } from '../products.service';
 
 const mockRepository = {
   create: jest.fn(),
   save: jest.fn(),
   findOne: jest.fn(),
+  find: jest.fn(),
   findAndCount: jest.fn(),
   softRemove: jest.fn(),
 };
@@ -43,6 +45,8 @@ const makeProduct = (overrides: Partial<Product> = {}): Product =>
     marca: 'Nike',
     images: [makeImage()],
     status: ProductStatus.AVAILABLE,
+    category: ProductCategory.CALCA,
+    size: 'M',
     descricao: 'A shoe',
     preco: 199.99,
     createdAt: new Date(),
@@ -76,6 +80,8 @@ describe('ProductsService', () => {
         marca: 'Nike',
         descricao: 'A shoe',
         preco: 199.99,
+        category: ProductCategory.CALCA,
+        size: 'M',
       };
       const s3Key = 'products/uuid-generated.jpg';
       const publicUrl =
@@ -94,7 +100,12 @@ describe('ProductsService', () => {
 
       expect(mockS3Service.uploadFile).toHaveBeenCalledTimes(mockFiles.length);
       expect(mockRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ cor: 'blue', status: ProductStatus.AVAILABLE }),
+        expect.objectContaining({
+          cor: 'blue',
+          status: ProductStatus.AVAILABLE,
+          category: ProductCategory.CALCA,
+          size: 'M',
+        }),
       );
       expect(result.imageUrls).toEqual([publicUrl, publicUrl]);
     });
@@ -105,6 +116,8 @@ describe('ProductsService', () => {
         marca: 'Nike',
         descricao: 'A shoe',
         preco: 199.99,
+        category: ProductCategory.CALCA,
+        size: 'M',
       };
 
       await expect(service.create(dto, [])).rejects.toThrow(CustomError);
@@ -139,6 +152,36 @@ describe('ProductsService', () => {
 
       await expect(service.sell(999)).rejects.toThrow(CustomError);
       await expect(service.sell(999)).rejects.toMatchObject({
+        status: HttpStatus.NOT_FOUND,
+      });
+    });
+  });
+
+  describe('revertSale', () => {
+    it('should revert a sold product back to available', async () => {
+      const sold = makeProduct({ status: ProductStatus.SOLD });
+      const available = makeProduct({ status: ProductStatus.AVAILABLE });
+
+      mockRepository.findOne.mockResolvedValue(sold);
+      mockRepository.save.mockResolvedValue(available);
+
+      const result = await service.revertSale(1);
+
+      expect(result.status).toBe(ProductStatus.AVAILABLE);
+    });
+
+    it('should throw CustomError with CONFLICT if product is not sold', async () => {
+      mockRepository.findOne.mockResolvedValue(makeProduct({ status: ProductStatus.AVAILABLE }));
+
+      await expect(service.revertSale(1)).rejects.toThrow(CustomError);
+      await expect(service.revertSale(1)).rejects.toMatchObject({ status: HttpStatus.CONFLICT });
+    });
+
+    it('should throw CustomError with NOT_FOUND if product does not exist', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.revertSale(999)).rejects.toThrow(CustomError);
+      await expect(service.revertSale(999)).rejects.toMatchObject({
         status: HttpStatus.NOT_FOUND,
       });
     });
@@ -238,12 +281,110 @@ describe('ProductsService', () => {
     });
 
     it('should calculate correct skip for page 2', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+      mockRepository.findAndCount.mockResolvedValue([[] as Product[], 0] as const);
 
       await service.findPaginated({ page: 2, limit: 20 });
 
       expect(mockRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({ skip: 20 }),
+      );
+    });
+  });
+
+  describe('findGroupedByCategories', () => {
+    it('should return products grouped by all categories', async () => {
+      const products = [
+        makeProduct({ id: 1, category: ProductCategory.CALCA }),
+        makeProduct({ id: 2, category: ProductCategory.BLUSA }),
+      ];
+      const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
+      mockRepository.find.mockResolvedValue(products);
+      mockS3Service.getPublicUrl.mockReturnValue(publicUrl);
+
+      const result = await service.findGroupedByCategories();
+
+      expect(result).toHaveLength(Object.values(ProductCategory).length);
+      const calcas = result.find((g) => g.category === ProductCategory.CALCA);
+      expect(calcas?.products).toHaveLength(1);
+      const blusas = result.find((g) => g.category === ProductCategory.BLUSA);
+      expect(blusas?.products).toHaveLength(1);
+    });
+  });
+
+  describe('findPaginatedByCategory', () => {
+    it('should return paginated products for a category', async () => {
+      const products = [makeProduct({ category: ProductCategory.CALCA })];
+      const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
+      mockRepository.findAndCount.mockResolvedValue([products, 1]);
+      mockS3Service.getPublicUrl.mockReturnValue(publicUrl);
+
+      const result = await service.findPaginatedByCategory(ProductCategory.CALCA, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.data[0].imageUrls).toEqual([publicUrl]);
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { category: ProductCategory.CALCA, status: ProductStatus.AVAILABLE },
+        }),
+      );
+    });
+  });
+
+  describe('findFiltered', () => {
+    it('should filter by size and cor', async () => {
+      const products: Product[] = [makeProduct({ size: 'M', cor: 'blue' })];
+      const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
+      mockRepository.findAndCount.mockResolvedValue([products, 1] as [Product[], number]);
+      mockS3Service.getPublicUrl.mockReturnValue(publicUrl);
+
+      const dto: FilterProductsDto = { size: 'M', cor: 'blue', page: 1, limit: 10 };
+      const result = await service.findFiltered(dto);
+
+      expect(result.total).toBe(1);
+      expect(result.data[0].imageUrls).toEqual([publicUrl]);
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          where: expect.objectContaining({ size: 'M', status: ProductStatus.AVAILABLE }),
+        }),
+      );
+    });
+
+    it('should filter by category and size combined', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[] as Product[], 0] as [Product[], number]);
+
+      await service.findFiltered({
+        category: ProductCategory.CALCA,
+        size: 'M',
+        page: 1,
+        limit: 10,
+      });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          where: expect.objectContaining({
+            category: ProductCategory.CALCA,
+            size: 'M',
+            status: ProductStatus.AVAILABLE,
+          }),
+        }),
+      );
+    });
+
+    it('should apply price range filter with Between', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[] as Product[], 0] as [Product[], number]);
+
+      await service.findFiltered({ precoMin: 50, precoMax: 200, page: 1, limit: 10 });
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          where: expect.objectContaining({ preco: expect.anything() }),
+        }),
       );
     });
   });

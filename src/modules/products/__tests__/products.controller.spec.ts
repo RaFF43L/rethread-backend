@@ -1,18 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MulterFile } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
+import { FilterProductsDto } from '../dto/filter-products.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
-import { Product, ProductStatus } from '../entities/product.entity';
+import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
 import { ProductsController } from '../products.controller';
 import { PaginatedResult, ProductsService } from '../products.service';
 
 const mockProductsService = {
   create: jest.fn(),
   sell: jest.fn(),
+  revertSale: jest.fn(),
   remove: jest.fn(),
   findById: jest.fn(),
   findByCodigoIdentificacao: jest.fn(),
   findPaginated: jest.fn(),
+  findGroupedByCategories: jest.fn(),
+  findPaginatedByCategory: jest.fn(),
+  findFiltered: jest.fn(),
 };
 
 const makeProduct = (overrides: Partial<Product> = {}): Product =>
@@ -23,6 +28,8 @@ const makeProduct = (overrides: Partial<Product> = {}): Product =>
     marca: 'Nike',
     images: [],
     status: ProductStatus.AVAILABLE,
+    category: ProductCategory.CALCA,
+    size: 'M',
     descricao: 'A shoe',
     preco: 199.99,
     createdAt: new Date(),
@@ -52,6 +59,8 @@ describe('ProductsController', () => {
         marca: 'Nike',
         descricao: 'A shoe',
         preco: 199.99,
+        category: ProductCategory.CALCA,
+        size: 'M',
       };
       const files: MulterFile[] = [
         { originalname: 'shoe.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('fake-image') },
@@ -75,6 +84,18 @@ describe('ProductsController', () => {
 
       expect(result).toEqual(product);
       expect(mockProductsService.sell).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('revertSale', () => {
+    it('should call productsService.revertSale with the id', async () => {
+      const product = makeProduct({ status: ProductStatus.AVAILABLE });
+      mockProductsService.revertSale.mockResolvedValue(product);
+
+      const result = await controller.revertSale(1);
+
+      expect(result).toEqual(product);
+      expect(mockProductsService.revertSale).toHaveBeenCalledWith(1);
     });
   });
 
@@ -124,6 +145,47 @@ describe('ProductsController', () => {
 
       expect(result).toEqual(paginated);
       expect(mockProductsService.findPaginated).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('findGroupedByCategories', () => {
+    it('should call productsService.findGroupedByCategories', async () => {
+      const grouped = [{ category: ProductCategory.CALCA, products: [] }];
+      mockProductsService.findGroupedByCategories.mockResolvedValue(grouped);
+
+      const result = await controller.findGroupedByCategories();
+
+      expect(result).toEqual(grouped);
+      expect(mockProductsService.findGroupedByCategories).toHaveBeenCalled();
+    });
+  });
+
+  describe('findPaginatedByCategory', () => {
+    it('should call productsService.findPaginatedByCategory with category and dto', async () => {
+      const dto: PaginateProductsDto = { page: 1, limit: 20 };
+      const paginated: PaginatedResult<Product> = { data: [], total: 0, page: 1, limit: 20 };
+      mockProductsService.findPaginatedByCategory.mockResolvedValue(paginated);
+
+      const result = await controller.findPaginatedByCategory(ProductCategory.CALCA, dto);
+
+      expect(result).toEqual(paginated);
+      expect(mockProductsService.findPaginatedByCategory).toHaveBeenCalledWith(
+        ProductCategory.CALCA,
+        dto,
+      );
+    });
+  });
+
+  describe('findFiltered', () => {
+    it('should call productsService.findFiltered with the dto', async () => {
+      const dto: FilterProductsDto = { size: 'M', cor: 'blue', page: 1, limit: 20 };
+      const paginated: PaginatedResult<Product> = { data: [], total: 0, page: 1, limit: 20 };
+      mockProductsService.findFiltered.mockResolvedValue(paginated);
+
+      const result = await controller.findFiltered(dto);
+
+      expect(result).toEqual(paginated);
+      expect(mockProductsService.findFiltered).toHaveBeenCalledWith(dto);
     });
   });
 });
