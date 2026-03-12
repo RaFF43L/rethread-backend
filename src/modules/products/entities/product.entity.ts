@@ -14,6 +14,14 @@ export enum ProductStatus {
   SOLD = 'sold',
 }
 
+export enum ProductCategory {
+  CALCA = 'calca',
+  BLUSA = 'blusa',
+  CAMISETA = 'camiseta',
+  SHORT = 'short',
+  VESTIDO = 'vestido',
+}
+
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
@@ -28,11 +36,17 @@ export class Product {
   @Column()
   marca!: string;
 
-  @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })
+  @OneToMany(() => ProductImage, (image) => image.product, { cascade: ['insert', 'update'] })
   images!: ProductImage[];
 
   @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.AVAILABLE })
   status!: ProductStatus;
+
+  @Column({ type: 'enum', enum: ProductCategory })
+  category!: ProductCategory;
+
+  @Column()
+  size!: string;
 
   @Column({ type: 'text' })
   descricao!: string;

@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { ProductCategory } from '../entities/product.entity';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'blue' })
@@ -23,4 +24,13 @@ export class CreateProductDto {
   @IsNumber()
   @IsPositive()
   preco!: number;
+
+  @ApiProperty({ enum: ProductCategory, example: ProductCategory.CALCA })
+  @IsEnum(ProductCategory)
+  category!: ProductCategory;
+
+  @ApiProperty({ example: 'M' })
+  @IsString()
+  @IsNotEmpty()
+  size!: string;
 }
