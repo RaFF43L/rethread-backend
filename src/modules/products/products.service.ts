@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { Between, ILike, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
@@ -20,6 +20,8 @@ export interface PaginatedResult<T> {
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
@@ -29,6 +31,8 @@ export class ProductsService {
   ) {}
 
   async create(dto: CreateProductDto, files: MulterFile[]): Promise<ProductResponseDto> {
+    this.logger.log(`create() called — files: ${files?.length ?? 0}, dto: ${JSON.stringify(dto)}`);
+
     if (!files || files.length === 0) {
       throw new CustomError('At least one product image is required.', HttpStatus.BAD_REQUEST);
     }
@@ -46,11 +50,15 @@ export class ProductsService {
       status: ProductStatus.AVAILABLE,
     });
 
+    this.logger.log(`Saving product entity...`);
     const saved = await this.productRepository.save(product);
+    this.logger.log(`Product saved with id=${saved.id}`);
 
     const images = await Promise.all(
       files.map(async (file) => {
+        this.logger.log(`Uploading file: ${file.originalname}`);
         const urlS3 = await this.s3Service.uploadFile(file, `products/${codigoIdentificacao}`);
+        this.logger.log(`Uploaded to S3: ${urlS3}`);
         return this.productImageRepository.save(
           this.productImageRepository.create({ product: saved, urlS3 }),
         );
