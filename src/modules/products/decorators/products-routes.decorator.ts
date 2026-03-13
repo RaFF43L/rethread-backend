@@ -338,7 +338,9 @@ export const UpdateProductRoute = () =>
   applyDecorators(
     Put(':id'),
     HttpCode(HttpStatus.OK),
-    ApiOperation({ summary: 'Update product fields (preco, size, descricao, cor, marca, category)' }),
+    UseInterceptors(FilesInterceptor('images', 10)),
+    ApiOperation({ summary: 'Update product fields and/or add new images' }),
+    ApiConsumes('multipart/form-data'),
     ApiParam({ name: 'id', type: Number }),
     ApiBody({
       schema: {
@@ -350,6 +352,7 @@ export const UpdateProductRoute = () =>
           preco: { type: 'number', example: 249.99 },
           category: { type: 'string', enum: Object.values(ProductCategory), example: ProductCategory.BLUSA },
           size: { type: 'string', example: 'G' },
+          images: { type: 'array', items: { type: 'string', format: 'binary' } },
         },
       },
     }),

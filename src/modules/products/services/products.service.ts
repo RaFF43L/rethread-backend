@@ -94,9 +94,27 @@ export class ProductsService {
     return this.productRepository.save(product);
   }
 
-  async update(id: number, dto: UpdateProductDto): Promise<ProductResponseDto> {
+  async update(id: number, dto: UpdateProductDto, files?: MulterFile[]): Promise<ProductResponseDto> {
     const product = await this.findOneOrFail(id);
-    Object.assign(product, dto);
+
+    const fields = Object.fromEntries(
+      Object.entries(dto).filter(([, v]) => v !== undefined),
+    ) as Partial<Product>;
+
+    Object.assign(product, fields);
+
+    if (files?.length) {
+      const newImages = await Promise.all(
+        files.map(async (file) => {
+          const urlS3 = await this.s3Service.uploadFile(file, `products/${product.codigoIdentificacao}`);
+          return this.productImageRepository.save(
+            this.productImageRepository.create({ product: { id } as Product, urlS3 }),
+          );
+        }),
+      );
+      product.images = [...(product.images ?? []), ...newImages];
+    }
+
     const saved = await this.productRepository.save(product);
     return this.attachImageUrls(saved);
   }

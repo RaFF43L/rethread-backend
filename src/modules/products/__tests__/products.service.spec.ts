@@ -189,9 +189,9 @@ describe('ProductsService', () => {
   });
 
   describe('update', () => {
-    it('should update the provided fields and return the product', async () => {
-      const product = makeProduct();
+    it('should apply only the provided fields and save', async () => {
       const dto: UpdateProductDto = { preco: 249.99, size: 'G' };
+      const product = makeProduct();
       const updated = makeProduct({ preco: 249.99, size: 'G' });
       const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
       mockRepository.findOne.mockResolvedValue(product);
@@ -200,9 +200,27 @@ describe('ProductsService', () => {
 
       const result = await service.update(1, dto);
 
+      expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ preco: 249.99, size: 'G' }));
       expect(result.preco).toBe(249.99);
       expect(result.size).toBe('G');
-      expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ preco: 249.99, size: 'G' }));
+    });
+
+    it('should upload new images and append them to the product', async () => {
+      const product = makeProduct();
+      const image = makeImage({ urlS3: 'products/new.jpg' });
+      const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/new.jpg';
+      mockRepository.findOne.mockResolvedValue(product);
+      mockRepository.save.mockResolvedValue({ ...product, images: [image] });
+      mockS3Service.uploadFile.mockResolvedValue('products/new.jpg');
+      mockS3Service.getPublicUrl.mockReturnValue(publicUrl);
+      mockImageRepository.create.mockReturnValue(image);
+      mockImageRepository.save.mockResolvedValue(image);
+
+      const result = await service.update(1, {}, mockFiles);
+
+      expect(mockS3Service.uploadFile).toHaveBeenCalledTimes(mockFiles.length);
+      expect(mockImageRepository.save).toHaveBeenCalledTimes(mockFiles.length);
+      expect(result.imageUrls).toContain(publicUrl);
     });
 
     it('should throw CustomError with NOT_FOUND if product does not exist', async () => {

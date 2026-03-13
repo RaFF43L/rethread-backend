@@ -56,8 +56,12 @@ export class ProductsController {
   }
 
   @UpdateProductRoute()
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
-    return this.productsService.update(id, dto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProductDto,
+    @UploadedFiles() files: MulterFile[],
+  ) {
+    return this.productsService.update(id, dto, files);
   }
 
   @RemoveProductRoute()

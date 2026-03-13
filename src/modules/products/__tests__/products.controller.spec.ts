@@ -111,15 +111,16 @@ describe('ProductsController', () => {
   });
 
   describe('update', () => {
-    it('should call productsService.update with id and dto', async () => {
+    it('should call productsService.update with id, dto and files', async () => {
       const dto: UpdateProductDto = { preco: 249.99, size: 'G' };
+      const files: MulterFile[] = [{ originalname: 'img.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('') }];
       const updated = makeProduct({ preco: 249.99, size: 'G' });
       mockProductsService.update.mockResolvedValue(updated);
 
-      const result = await controller.update(1, dto);
+      const result = await controller.update(1, dto, files);
 
       expect(result).toEqual(updated);
-      expect(mockProductsService.update).toHaveBeenCalledWith(1, dto);
+      expect(mockProductsService.update).toHaveBeenCalledWith(1, dto, files);
     });
   });
 
