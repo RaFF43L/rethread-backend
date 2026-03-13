@@ -8,7 +8,7 @@ import { FilterProductsDto } from '../dto/filter-products.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { ProductImage } from '../entities/product-image.entity';
 import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
-import { ProductsService } from '../products.service';
+import { ProductsService } from '../services/products.service';
 
 const mockRepository = {
   create: jest.fn(),
