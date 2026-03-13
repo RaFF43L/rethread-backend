@@ -332,3 +332,39 @@ export const FindFilteredRoute = () =>
       schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
     }),
   );
+
+export const GetDashboardRoute = () =>
+  applyDecorators(
+    Get('dashboard'),
+    HttpCode(HttpStatus.OK),
+    ApiOperation({
+      summary: 'Get dashboard summary: totals, availability counts and price aggregates',
+    }),
+    ApiQuery({ name: 'startDate', required: false, type: String, example: '2026-01-01' }),
+    ApiQuery({ name: 'endDate', required: false, type: String, example: '2026-12-31' }),
+    ApiQuery({ name: 'category', required: false, enum: ProductCategory }),
+    ApiQuery({ name: 'size', required: false, type: String, example: 'M' }),
+    ApiQuery({ name: 'marca', required: false, type: String, example: 'Nike' }),
+    ApiQuery({ name: 'cor', required: false, type: String, example: 'blue' }),
+    ApiQuery({ name: 'status', required: false, enum: ProductStatus }),
+    ApiResponse({
+      status: 200,
+      description: 'Dashboard aggregated data.',
+      schema: {
+        type: 'object',
+        properties: {
+          total: { type: 'integer', example: 50 },
+          available: { type: 'integer', example: 35 },
+          sold: { type: 'integer', example: 15 },
+          totalValue: { type: 'number', example: 4999.5 },
+          availableValue: { type: 'number', example: 3499.5 },
+          soldValue: { type: 'number', example: 1500 },
+        },
+      },
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+  );

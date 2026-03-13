@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MulterFile } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
+import { DashboardFilterDto } from '../dto/dashboard-filter.dto';
 import { FilterProductsDto } from '../dto/filter-products.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
 import { ProductsController } from '../products.controller';
-import { PaginatedResult, ProductsService } from '../products.service';
+import { PaginatedResult, ProductsService } from '../services/products.service';
+import { ProductsDashboardService } from '../services/products-dashboard.service';
 
 const mockProductsService = {
   create: jest.fn(),
@@ -18,6 +20,10 @@ const mockProductsService = {
   findGroupedByCategories: jest.fn(),
   findPaginatedByCategory: jest.fn(),
   findFiltered: jest.fn(),
+};
+
+const mockProductsDashboardService = {
+  getDashboard: jest.fn(),
 };
 
 const makeProduct = (overrides: Partial<Product> = {}): Product =>
@@ -46,7 +52,10 @@ describe('ProductsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductsController],
-      providers: [{ provide: ProductsService, useValue: mockProductsService }],
+      providers: [
+        { provide: ProductsService, useValue: mockProductsService },
+        { provide: ProductsDashboardService, useValue: mockProductsDashboardService },
+      ],
     }).compile();
 
     controller = module.get<ProductsController>(ProductsController);
@@ -186,6 +195,26 @@ describe('ProductsController', () => {
 
       expect(result).toEqual(paginated);
       expect(mockProductsService.findFiltered).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('getDashboard', () => {
+    it('should call productsDashboardService.getDashboard with the dto', async () => {
+      const dto: DashboardFilterDto = { category: ProductCategory.CALCA, size: 'M' };
+      const dashboard = {
+        total: 10,
+        available: 7,
+        sold: 3,
+        totalValue: 999,
+        availableValue: 700,
+        soldValue: 299,
+      };
+      mockProductsDashboardService.getDashboard.mockResolvedValue(dashboard);
+
+      const result = await controller.getDashboard(dto);
+
+      expect(result).toEqual(dashboard);
+      expect(mockProductsDashboardService.getDashboard).toHaveBeenCalledWith(dto);
     });
   });
 });

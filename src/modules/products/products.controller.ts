@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import type { MulterFile } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { DashboardFilterDto } from './dto/dashboard-filter.dto';
 import { FilterProductsDto } from './dto/filter-products.dto';
 import { PaginateProductsDto } from './dto/paginate-products.dto';
 import {
@@ -19,18 +20,23 @@ import {
   FindGroupedByCategoriesRoute,
   FindPaginatedByCategoryRoute,
   FindPaginatedRoute,
+  GetDashboardRoute,
   ProductsTag,
   RemoveProductRoute,
   RevertSaleProductRoute,
   SellProductRoute,
 } from './decorators/products-routes.decorator';
-import { ProductsService } from './products.service';
 import { ProductCategory } from './entities/product.entity';
+import { ProductsDashboardService } from './services/products-dashboard.service';
+import { ProductsService } from './services/products.service';
 
 @ProductsTag()
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly productsDashboardService: ProductsDashboardService,
+  ) {}
 
   @CreateProductRoute()
   create(@Body() dto: CreateProductDto, @UploadedFiles() files: MulterFile[]) {
@@ -55,6 +61,11 @@ export class ProductsController {
   @FindFilteredRoute()
   findFiltered(@Query() dto: FilterProductsDto) {
     return this.productsService.findFiltered(dto);
+  }
+
+  @GetDashboardRoute()
+  getDashboard(@Query() dto: DashboardFilterDto) {
+    return this.productsDashboardService.getDashboard(dto);
   }
 
   @FindGroupedByCategoriesRoute()
