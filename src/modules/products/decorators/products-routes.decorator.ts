@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { Public } from '../../../common/decorators/public.decorator';
 import { ProductCategory, ProductStatus } from '../entities/product.entity';
 
 const productSchema: SchemaObject = {
@@ -190,6 +191,7 @@ export const FindByIdRoute = () =>
   applyDecorators(
     Get(':id'),
     HttpCode(HttpStatus.OK),
+    Public(),
     ApiOperation({ summary: 'Get a product by id' }),
     ApiParam({ name: 'id', type: Number }),
     ApiResponse({ status: 200, description: 'Product found.', schema: productSchema }),
@@ -209,6 +211,7 @@ export const FindByCodigoIdentificacaoRoute = () =>
   applyDecorators(
     Get('codigo/:codigoIdentificacao'),
     HttpCode(HttpStatus.OK),
+    Public(),
     ApiOperation({ summary: 'Get a product by codigoIdentificacao (UUID)' }),
     ApiParam({ name: 'codigoIdentificacao', type: String }),
     ApiResponse({ status: 200, description: 'Product found.', schema: productSchema }),
@@ -228,6 +231,7 @@ export const FindPaginatedRoute = () =>
   applyDecorators(
     Get(),
     HttpCode(HttpStatus.OK),
+    Public(),
     ApiOperation({ summary: 'List products with pagination' }),
     ApiQuery({ name: 'page', required: false, type: Number, example: 1 }),
     ApiQuery({ name: 'limit', required: false, type: Number, example: 20 }),
@@ -247,6 +251,7 @@ export const FindGroupedByCategoriesRoute = () =>
   applyDecorators(
     Get('categories'),
     HttpCode(HttpStatus.OK),
+    Public(),
     ApiOperation({ summary: 'List available products grouped by category' }),
     ApiResponse({
       status: 200,
@@ -277,6 +282,7 @@ export const FindPaginatedByCategoryRoute = () =>
   applyDecorators(
     Get('categories/:category'),
     HttpCode(HttpStatus.OK),
+    Public(),
     ApiOperation({ summary: 'List available products paginated by category' }),
     ApiParam({ name: 'category', enum: ProductCategory }),
     ApiQuery({ name: 'page', required: false, type: Number, example: 1 }),
@@ -306,6 +312,7 @@ export const FindFilteredRoute = () =>
   applyDecorators(
     Get('filter'),
     HttpCode(HttpStatus.OK),
+    Public(),
     ApiOperation({
       summary: 'Filter available products by category, size, color, brand and price range',
     }),
