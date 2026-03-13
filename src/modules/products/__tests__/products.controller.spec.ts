@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MulterFile } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { DashboardFilterDto } from '../dto/dashboard-filter.dto';
+import { UpdateProductDto } from '../dto/update-product.dto';
 import { FilterProductsDto } from '../dto/filter-products.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
@@ -14,6 +15,7 @@ const mockProductsService = {
   sell: jest.fn(),
   revertSale: jest.fn(),
   remove: jest.fn(),
+  update: jest.fn(),
   findById: jest.fn(),
   findByCodigoIdentificacao: jest.fn(),
   findPaginated: jest.fn(),
@@ -105,6 +107,19 @@ describe('ProductsController', () => {
 
       expect(result).toEqual(product);
       expect(mockProductsService.revertSale).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('update', () => {
+    it('should call productsService.update with id and dto', async () => {
+      const dto: UpdateProductDto = { preco: 249.99, size: 'G' };
+      const updated = makeProduct({ preco: 249.99, size: 'G' });
+      mockProductsService.update.mockResolvedValue(updated);
+
+      const result = await controller.update(1, dto);
+
+      expect(result).toEqual(updated);
+      expect(mockProductsService.update).toHaveBeenCalledWith(1, dto);
     });
   });
 

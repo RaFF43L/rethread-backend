@@ -6,6 +6,7 @@ import { CustomError } from '../../../common/errors/custom-error';
 import { MulterFile, S3Service } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { FilterProductsDto } from '../dto/filter-products.dto';
+import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { ProductResponseDto } from '../dto/product-response.dto';
 import { ProductImage } from '../entities/product-image.entity';
@@ -91,6 +92,13 @@ export class ProductsService {
     product.status = ProductStatus.AVAILABLE;
 
     return this.productRepository.save(product);
+  }
+
+  async update(id: number, dto: UpdateProductDto): Promise<ProductResponseDto> {
+    const product = await this.findOneOrFail(id);
+    Object.assign(product, dto);
+    const saved = await this.productRepository.save(product);
+    return this.attachImageUrls(saved);
   }
 
   async remove(id: number): Promise<void> {

@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -330,6 +331,43 @@ export const FindFilteredRoute = () =>
       status: 401,
       description: 'Unauthorized.',
       schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+  );
+
+export const UpdateProductRoute = () =>
+  applyDecorators(
+    Put(':id'),
+    HttpCode(HttpStatus.OK),
+    ApiOperation({ summary: 'Update product fields (preco, size, descricao, cor, marca, category)' }),
+    ApiParam({ name: 'id', type: Number }),
+    ApiBody({
+      schema: {
+        type: 'object',
+        properties: {
+          cor: { type: 'string', example: 'red' },
+          marca: { type: 'string', example: 'Adidas' },
+          descricao: { type: 'string', example: 'An updated description' },
+          preco: { type: 'number', example: 249.99 },
+          category: { type: 'string', enum: Object.values(ProductCategory), example: ProductCategory.BLUSA },
+          size: { type: 'string', example: 'G' },
+        },
+      },
+    }),
+    ApiResponse({ status: 200, description: 'Product updated.', schema: productSchema }),
+    ApiResponse({
+      status: 400,
+      description: 'Invalid data.',
+      schema: errorSchema(400, 'preco must be a positive number', 'Bad Request'),
+    }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Product not found.',
+      schema: errorSchema(404, 'Product not found.', 'Not Found'),
     }),
   );
 

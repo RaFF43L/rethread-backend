@@ -5,6 +5,7 @@ import { CustomError } from '../../../common/errors/custom-error';
 import { MulterFile, S3Service } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { FilterProductsDto } from '../dto/filter-products.dto';
+import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { ProductImage } from '../entities/product-image.entity';
 import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
@@ -182,6 +183,33 @@ describe('ProductsService', () => {
 
       await expect(service.revertSale(999)).rejects.toThrow(CustomError);
       await expect(service.revertSale(999)).rejects.toMatchObject({
+        status: HttpStatus.NOT_FOUND,
+      });
+    });
+  });
+
+  describe('update', () => {
+    it('should update the provided fields and return the product', async () => {
+      const product = makeProduct();
+      const dto: UpdateProductDto = { preco: 249.99, size: 'G' };
+      const updated = makeProduct({ preco: 249.99, size: 'G' });
+      const publicUrl = 'https://rethread-prod.s3.us-east-1.amazonaws.com/products/img.jpg';
+      mockRepository.findOne.mockResolvedValue(product);
+      mockRepository.save.mockResolvedValue(updated);
+      mockS3Service.getPublicUrl.mockReturnValue(publicUrl);
+
+      const result = await service.update(1, dto);
+
+      expect(result.preco).toBe(249.99);
+      expect(result.size).toBe('G');
+      expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ preco: 249.99, size: 'G' }));
+    });
+
+    it('should throw CustomError with NOT_FOUND if product does not exist', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.update(999, { preco: 10 })).rejects.toThrow(CustomError);
+      await expect(service.update(999, { preco: 10 })).rejects.toMatchObject({
         status: HttpStatus.NOT_FOUND,
       });
     });

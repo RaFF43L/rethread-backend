@@ -10,6 +10,7 @@ import {
 import type { MulterFile } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductsDto } from './dto/filter-products.dto';
 import { PaginateProductsDto } from './dto/paginate-products.dto';
 import {
@@ -25,6 +26,7 @@ import {
   RemoveProductRoute,
   RevertSaleProductRoute,
   SellProductRoute,
+  UpdateProductRoute,
 } from './decorators/products-routes.decorator';
 import { ProductCategory } from './entities/product.entity';
 import { ProductsDashboardService } from './services/products-dashboard.service';
@@ -51,6 +53,11 @@ export class ProductsController {
   @RevertSaleProductRoute()
   revertSale(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.revertSale(id);
+  }
+
+  @UpdateProductRoute()
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
+    return this.productsService.update(id, dto);
   }
 
   @RemoveProductRoute()
