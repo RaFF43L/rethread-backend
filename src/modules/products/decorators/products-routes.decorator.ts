@@ -82,7 +82,9 @@ export const CreateProductRoute = () =>
   applyDecorators(
     Post(),
     HttpCode(HttpStatus.CREATED),
-    UseInterceptors(FilesInterceptor('images', 10)),
+    UseInterceptors(FilesInterceptor('images', 10, { 
+      limits: { fileSize: 1500 * 1024 * 1024 }, // 1500 MB limit per file
+    })), 
     ApiOperation({ summary: 'Create a new product' }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
