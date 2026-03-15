@@ -321,7 +321,7 @@ describe('ProductsService', () => {
       expect(mockRepository.findAndCount).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        order: { createdAt: 'DESC' },
+        order: { status: 'ASC', createdAt: 'DESC' },
         relations: ['images'],
       });
     });
