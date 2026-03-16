@@ -6,9 +6,7 @@ const basicAuth = require('express-basic-auth') as typeof import('express-basic-
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { 
-    bodyParser: false // Disable built-in body parser to handle multipart/form-data with files
-  });
+  const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
     new ValidationPipe({
