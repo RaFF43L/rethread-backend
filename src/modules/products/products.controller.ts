@@ -41,8 +41,11 @@ export class ProductsController {
   ) {}
 
   @CreateProductRoute()
-  create(@Body() dto: CreateProductDto, @UploadedFiles() files: MulterFile[]) {
-    return this.productsService.create(dto, files);
+  create(
+    @Body() dto: CreateProductDto,
+    @UploadedFiles() files: { images?: MulterFile[]; videos?: MulterFile[] },
+  ) {
+    return this.productsService.create(dto, files.images ?? [], files.videos ?? []);
   }
 
   @SellProductRoute()
@@ -59,9 +62,9 @@ export class ProductsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateProductDto,
-    @UploadedFiles() files: MulterFile[],
+    @UploadedFiles() files: { images?: MulterFile[]; videos?: MulterFile[] },
   ) {
-    return this.productsService.update(id, dto, files);
+    return this.productsService.update(id, dto, files.images ?? [], files.videos ?? []);
   }
 
   @RemoveProductRoute()

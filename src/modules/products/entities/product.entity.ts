@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ProductImage } from './product-image.entity';
+import { ProductVideo } from './product-video.entity';
 
 export enum ProductStatus {
   AVAILABLE = 'available',
@@ -38,6 +39,9 @@ export class Product {
 
   @OneToMany(() => ProductImage, (image) => image.product, { cascade: ['insert', 'update'] })
   images!: ProductImage[];
+
+  @OneToMany(() => ProductVideo, (video) => video.product, { cascade: ['insert', 'update'] })
+  videos!: ProductVideo[];
 
   @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.AVAILABLE })
   status!: ProductStatus;

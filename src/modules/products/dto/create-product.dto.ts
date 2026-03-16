@@ -1,7 +1,10 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { MulterFile } from '../../../common/services/s3.service';
 import { ProductCategory } from '../entities/product.entity';
+
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'blue' })
@@ -33,4 +36,6 @@ export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
   size!: string;
+
+  // videos removido: upload tratado via arquivos
 }

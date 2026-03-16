@@ -79,10 +79,10 @@ describe('ProductsController', () => {
       const product = makeProduct();
       mockProductsService.create.mockResolvedValue(product);
 
-      const result = await controller.create(dto, files);
+      const result = await controller.create(dto, { images: files });
 
       expect(result).toEqual(product);
-      expect(mockProductsService.create).toHaveBeenCalledWith(dto, files);
+      expect(mockProductsService.create).toHaveBeenCalledWith(dto, files, []);
     });
   });
 
@@ -113,14 +113,16 @@ describe('ProductsController', () => {
   describe('update', () => {
     it('should call productsService.update with id, dto and files', async () => {
       const dto: UpdateProductDto = { preco: 249.99, size: 'G' };
-      const files: MulterFile[] = [{ originalname: 'img.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('') }];
+      const files: MulterFile[] = [
+        { originalname: 'img.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('') },
+      ];
       const updated = makeProduct({ preco: 249.99, size: 'G' });
       mockProductsService.update.mockResolvedValue(updated);
 
-      const result = await controller.update(1, dto, files);
+      const result = await controller.update(1, dto, { images: files });
 
       expect(result).toEqual(updated);
-      expect(mockProductsService.update).toHaveBeenCalledWith(1, dto, files);
+      expect(mockProductsService.update).toHaveBeenCalledWith(1, dto, files, []);
     });
   });
 

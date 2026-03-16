@@ -8,6 +8,8 @@ import { FilterProductsDto } from '../dto/filter-products.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
 import { ProductImage } from '../entities/product-image.entity';
+import { ProductVideo } from '../entities/product-video.entity';
+import { mockVideoRepository } from './mock-video-repository';
 import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
 import { ProductsService } from '../services/products.service';
 
@@ -67,6 +69,7 @@ describe('ProductsService', () => {
         ProductsService,
         { provide: getRepositoryToken(Product), useValue: mockRepository },
         { provide: getRepositoryToken(ProductImage), useValue: mockImageRepository },
+        { provide: getRepositoryToken(ProductVideo), useValue: mockVideoRepository },
         { provide: S3Service, useValue: mockS3Service },
       ],
     }).compile();
@@ -200,7 +203,9 @@ describe('ProductsService', () => {
 
       const result = await service.update(1, dto);
 
-      expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ preco: 249.99, size: 'G' }));
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ preco: 249.99, size: 'G' }),
+      );
       expect(result.preco).toBe(249.99);
       expect(result.size).toBe('G');
     });
@@ -288,7 +293,7 @@ describe('ProductsService', () => {
       expect(result.imageUrls).toEqual([publicUrl]);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { codigoIdentificacao: product.codigoIdentificacao },
-        relations: ['images'],
+        relations: ['images', 'videos'],
       });
     });
 
@@ -322,7 +327,7 @@ describe('ProductsService', () => {
         skip: 0,
         take: 10,
         order: { status: 'ASC', createdAt: 'DESC' },
-        relations: ['images'],
+        relations: ['images', 'videos'],
       });
     });
 

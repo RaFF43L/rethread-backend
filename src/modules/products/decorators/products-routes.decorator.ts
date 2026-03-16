@@ -9,7 +9,7 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
@@ -51,6 +51,32 @@ const productSchema: SchemaObject = {
       type: 'array',
       items: { type: 'string', example: 'https://bucket.s3.amazonaws.com/products/uuid/photo.jpg' },
     },
+    images: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          urlS3: {
+            type: 'string',
+            example: 'https://bucket.s3.amazonaws.com/products/uuid/photo.jpg',
+          },
+        },
+      },
+    },
+    videos: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          urlS3: {
+            type: 'string',
+            example: 'https://bucket.s3.amazonaws.com/products/uuid/video.mp4',
+          },
+        },
+      },
+    },
     createdAt: { type: 'string', format: 'date-time', example: '2026-03-12T00:00:00.000Z' },
     updatedAt: { type: 'string', format: 'date-time', example: '2026-03-12T00:00:00.000Z' },
     deletedAt: { type: 'string', format: 'date-time', nullable: true, example: null },
@@ -82,9 +108,17 @@ export const CreateProductRoute = () =>
   applyDecorators(
     Post(),
     HttpCode(HttpStatus.CREATED),
-    UseInterceptors(FilesInterceptor('images', 10, { 
-      limits: { fileSize: 1500 * 1024 * 1024 }, // 1500 MB limit per file
-    })), 
+    UseInterceptors(
+      FileFieldsInterceptor(
+        [
+          { name: 'images', maxCount: 10 },
+          { name: 'videos', maxCount: 5 },
+        ],
+        {
+          limits: { fileSize: 1500 * 1024 * 1024 }, // 1500 MB por arquivo
+        },
+      ),
+    ),
     ApiOperation({ summary: 'Create a new product' }),
     ApiConsumes('multipart/form-data'),
     ApiBody({
@@ -105,6 +139,11 @@ export const CreateProductRoute = () =>
           images: {
             type: 'array',
             items: { type: 'string', format: 'binary' },
+          },
+          videos: {
+            type: 'array',
+            items: { type: 'string', format: 'binary' },
+            description: 'Product videos (mp4, mov, etc.)',
           },
         },
       },
@@ -347,8 +386,13 @@ export const UpdateProductRoute = () =>
   applyDecorators(
     Put(':id'),
     HttpCode(HttpStatus.OK),
-    UseInterceptors(FilesInterceptor('images', 10)),
-    ApiOperation({ summary: 'Update product fields and/or add new images' }),
+    UseInterceptors(
+      FileFieldsInterceptor([
+        { name: 'images', maxCount: 10 },
+        { name: 'videos', maxCount: 5 },
+      ]),
+    ),
+    ApiOperation({ summary: 'Update product fields and/or add new images/videos' }),
     ApiConsumes('multipart/form-data'),
     ApiParam({ name: 'id', type: Number }),
     ApiBody({
@@ -359,9 +403,18 @@ export const UpdateProductRoute = () =>
           marca: { type: 'string', example: 'Adidas' },
           descricao: { type: 'string', example: 'An updated description' },
           preco: { type: 'number', example: 249.99 },
-          category: { type: 'string', enum: Object.values(ProductCategory), example: ProductCategory.BLUSA },
+          category: {
+            type: 'string',
+            enum: Object.values(ProductCategory),
+            example: ProductCategory.BLUSA,
+          },
           size: { type: 'string', example: 'G' },
           images: { type: 'array', items: { type: 'string', format: 'binary' } },
+          videos: {
+            type: 'array',
+            items: { type: 'string', format: 'binary' },
+            description: 'Product videos (mp4, mov, etc.)',
+          },
         },
       },
     }),
