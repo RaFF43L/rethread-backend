@@ -8,9 +8,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const url = config.getOrThrow<string>('DATABASE_URL');
-
-        console.log('Database URL:', url);
-
         return {
           type: 'postgres',
           url,
