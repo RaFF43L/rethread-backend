@@ -19,4 +19,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "node ./node_modules/.bin/typeorm migration:run -d dist/database/data-source.js && node dist/main"]
+CMD ["node", "dist/main"]
