@@ -6,6 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 import { CustomError } from '../errors/custom-error';
 
@@ -115,6 +116,15 @@ export class S3Service {
     }
 
     return Buffer.concat(chunks);
+  }
+
+  async generatePresignedUploadUrl(key: string, fileType: string, expiresInSeconds = 600): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: fileType,
+    });
+    return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
   }
 
   async deleteFile(key: string): Promise<void> {

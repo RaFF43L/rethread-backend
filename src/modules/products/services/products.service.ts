@@ -5,6 +5,8 @@ import { Between, ILike, LessThanOrEqual, MoreThanOrEqual, Repository } from 'ty
 import { CustomError } from '../../../common/errors/custom-error';
 import { MulterFile, S3Service } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
+import { GeneratePresignedUrlDto } from '../dto/generate-presigned-url.dto';
+import { RegisterProductImageDto } from '../dto/register-product-image.dto';
 import { FilterProductsDto } from '../dto/filter-products.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
@@ -34,19 +36,8 @@ export class ProductsService {
     private readonly s3Service: S3Service,
   ) {}
 
-  async create(
-    dto: CreateProductDto,
-    imageFiles: MulterFile[] = [],
-    videoFiles: MulterFile[] = [],
-  ): Promise<ProductResponseDto> {
-    this.logger.log(`create() called — images: ${imageFiles?.length ?? 0}, videos: ${videoFiles?.length ?? 0}, dto: ${JSON.stringify(dto)}`);
-
-    if (!imageFiles.length) {
-      throw new CustomError('At least one product image is required.', HttpStatus.BAD_REQUEST);
-    }
-
+  async create(dto: CreateProductDto): Promise<ProductResponseDto> {
     const codigoIdentificacao = randomUUID();
-
     const product = this.productRepository.create({
       cor: dto.cor,
       marca: dto.marca,
@@ -57,38 +48,31 @@ export class ProductsService {
       codigoIdentificacao,
       status: ProductStatus.AVAILABLE,
     });
-
-    this.logger.log(`Saving product entity...`);
     const saved = await this.productRepository.save(product);
-    this.logger.log(`Product saved with id=${saved.id}`);
-
-    // Upload e persistência das imagens
-    const images = await Promise.all(
-      imageFiles.map(async (file) => {
-        this.logger.log(`Uploading image: ${file.originalname}`);
-        const urlS3 = await this.s3Service.uploadFile(file, `products/${codigoIdentificacao}`);
-        this.logger.log(`Uploaded image to S3: ${urlS3}`);
-        return this.productImageRepository.save(
-          this.productImageRepository.create({ product: saved, urlS3 }),
-        );
-      }),
-    );
-    saved.images = images;
-
-    // Upload e persistência dos vídeos
-    const videos = await Promise.all(
-      videoFiles.map(async (file) => {
-        this.logger.log(`Uploading video: ${file.originalname}`);
-        const urlS3 = await this.s3Service.uploadFile(file, `products/${codigoIdentificacao}`);
-        this.logger.log(`Uploaded video to S3: ${urlS3}`);
-        return this.productVideoRepository.save(
-          this.productVideoRepository.create({ product: saved, urlS3 }),
-        );
-      }),
-    );
-    saved.videos = videos;
-
     return this.attachMediaUrls(saved);
+  }
+
+  async generatePresignedUploadUrl(dto: GeneratePresignedUrlDto): Promise<{ url: string; key: string }> {
+    const codigoIdentificacao = dto.productId ?? randomUUID();
+    const key = `products/${codigoIdentificacao}/${dto.fileName}`;
+    const url = await this.s3Service.generatePresignedUploadUrl(key, dto.fileType);
+    return { url, key };
+  }
+
+  async registerImage(dto: RegisterProductImageDto) {
+    const product = await this.productRepository.findOne({
+      where: { codigoIdentificacao: dto.productId },
+    });
+    if (!product) {
+      throw new CustomError('Product not found.', HttpStatus.NOT_FOUND);
+    }
+    const image = await this.productImageRepository.save(
+      this.productImageRepository.create({ product, urlS3: dto.key }),
+    );
+    return {
+      id: image.id,
+      urlS3: this.s3Service.getPublicUrl(image.urlS3),
+    };
   }
 
   async sell(id: number): Promise<Product> {

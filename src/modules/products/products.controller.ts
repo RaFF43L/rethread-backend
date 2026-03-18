@@ -4,11 +4,14 @@ import {
   Param,
   ParseEnumPipe,
   ParseIntPipe,
+  Post,
   Query,
   UploadedFiles,
 } from '@nestjs/common';
 import type { MulterFile } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { GeneratePresignedUrlDto } from './dto/generate-presigned-url.dto';
+import { RegisterProductImageDto } from './dto/register-product-image.dto';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductsDto } from './dto/filter-products.dto';
@@ -40,12 +43,19 @@ export class ProductsController {
     private readonly productsDashboardService: ProductsDashboardService,
   ) {}
 
+  @Post('presigned-upload-url')
+  generatePresignedUploadUrl(@Body() dto: GeneratePresignedUrlDto) {
+    return this.productsService.generatePresignedUploadUrl(dto);
+  }
+
+  @Post('register-image')
+  registerImage(@Body() dto: RegisterProductImageDto) {
+    return this.productsService.registerImage(dto);
+  }
+
   @CreateProductRoute()
-  create(
-    @Body() dto: CreateProductDto,
-    @UploadedFiles() files: { images?: MulterFile[]; videos?: MulterFile[] },
-  ) {
-    return this.productsService.create(dto, files.images ?? [], files.videos ?? []);
+  create(@Body() dto: CreateProductDto) {
+    return this.productsService.create(dto);
   }
 
   @SellProductRoute()
