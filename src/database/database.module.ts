@@ -7,25 +7,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const host = config.getOrThrow<string>('DB_HOST');
-        const port = config.getOrThrow<number>('DB_PORT');
-        const username = config.getOrThrow<string>('DB_USERNAME');
-        const database = config.getOrThrow<string>('DB_NAME');
+        const url = config.getOrThrow<string>('DATABASE_URL');
 
-        console.log('Database config:', { host, port, username, database });
+        console.log('Database URL:', url);
 
         return {
-        type: 'postgres',
-        host,
-        port,
-        username,
-        password: config.getOrThrow<string>('DB_PASSWORD'),
-        database,
-        entities: [__dirname + '/../modules/**/entities/*.entity{.ts,.js}'],
-        synchronize:
-          config.get<string>('DB_SYNCHRONIZE') === 'true' ||
-          config.get<string>('NODE_ENV') !== 'production',
-        logging: config.get<string>('NODE_ENV') === 'development',
+          type: 'postgres',
+          url,
+          entities: [__dirname + '/../modules/**/entities/*.entity{.ts,.js}'],
+          synchronize:
+            config.get<string>('DB_SYNCHRONIZE') === 'true' ||
+            config.get<string>('NODE_ENV') !== 'production',
+          logging: config.get<string>('NODE_ENV') === 'development',
         };
       },
     }),
