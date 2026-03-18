@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { ErrorHandlerFilter } from './common/filters/error-handler.filter';
 import { CognitoAuthGuard } from './common/guards/cognito-auth.guard';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     AuthModule,
     ProductsModule,
     UsersModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: ErrorHandlerFilter },
