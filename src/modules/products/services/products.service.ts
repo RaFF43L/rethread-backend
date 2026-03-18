@@ -7,6 +7,7 @@ import { MulterFile, S3Service } from '../../../common/services/s3.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { GeneratePresignedUrlDto } from '../dto/generate-presigned-url.dto';
 import { RegisterProductImageDto } from '../dto/register-product-image.dto';
+import { RegisterProductVideoDto } from '../dto/register-product-video.dto';
 import { FilterProductsDto } from '../dto/filter-products.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginateProductsDto } from '../dto/paginate-products.dto';
@@ -72,6 +73,22 @@ export class ProductsService {
     return {
       id: image.id,
       urlS3: this.s3Service.getPublicUrl(image.urlS3),
+    };
+  }
+
+  async registerVideo(dto: RegisterProductVideoDto) {
+    const product = await this.productRepository.findOne({
+      where: { codigoIdentificacao: dto.productId },
+    });
+    if (!product) {
+      throw new CustomError('Product not found.', HttpStatus.NOT_FOUND);
+    }
+    const video = await this.productVideoRepository.save(
+      this.productVideoRepository.create({ product, urlS3: dto.key }),
+    );
+    return {
+      id: video.id,
+      urlS3: this.s3Service.getPublicUrl(video.urlS3),
     };
   }
 

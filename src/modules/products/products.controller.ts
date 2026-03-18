@@ -12,6 +12,7 @@ import type { MulterFile } from '../../common/services/s3.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GeneratePresignedUrlDto } from './dto/generate-presigned-url.dto';
 import { RegisterProductImageDto } from './dto/register-product-image.dto';
+import { RegisterProductVideoDto } from './dto/register-product-video.dto';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FilterProductsDto } from './dto/filter-products.dto';
@@ -51,6 +52,11 @@ export class ProductsController {
   @Post('register-image')
   registerImage(@Body() dto: RegisterProductImageDto) {
     return this.productsService.registerImage(dto);
+  }
+
+  @Post('register-video')
+  registerVideo(@Body() dto: RegisterProductVideoDto) {
+    return this.productsService.registerVideo(dto);
   }
 
   @CreateProductRoute()
