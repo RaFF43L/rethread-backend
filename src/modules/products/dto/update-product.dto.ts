@@ -12,8 +12,6 @@ export class UpdateProductDto {
 
   @ApiPropertyOptional({ example: 'Adidas' })
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
   marca?: string;
 
   @ApiPropertyOptional({ example: 'An updated description' })

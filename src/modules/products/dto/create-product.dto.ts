@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { MulterFile } from '../../../common/services/s3.service';
 import { ProductCategory } from '../entities/product.entity';
@@ -13,8 +13,7 @@ export class CreateProductDto {
   cor!: string;
 
   @ApiProperty({ example: 'Nike' })
-  @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   marca!: string;
 
   @ApiProperty({ example: 'A great shoe' })
