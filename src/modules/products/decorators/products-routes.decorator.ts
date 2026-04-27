@@ -436,6 +436,25 @@ export const UpdateProductRoute = () =>
     }),
   );
 
+export const RemoveProductImageRoute = () =>
+  applyDecorators(
+    Delete('images/:imageId'),
+    HttpCode(HttpStatus.NO_CONTENT),
+    ApiOperation({ summary: 'Remove a product image and delete it from S3' }),
+    ApiParam({ name: 'imageId', type: Number }),
+    ApiResponse({ status: 204, description: 'Image deleted.' }),
+    ApiResponse({
+      status: 401,
+      description: 'Unauthorized.',
+      schema: errorSchema(401, 'Unauthorized', 'Unauthorized'),
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Image not found.',
+      schema: errorSchema(404, 'Image not found.', 'Not Found'),
+    }),
+  );
+
 export const GetDashboardRoute = () =>
   applyDecorators(
     Get('dashboard'),

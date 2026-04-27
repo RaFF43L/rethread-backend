@@ -53,7 +53,9 @@ export class ProductsService {
     return this.attachMediaUrls(saved);
   }
 
-  async generatePresignedUploadUrl(dto: GeneratePresignedUrlDto): Promise<{ url: string; key: string }> {
+  async generatePresignedUploadUrl(
+    dto: GeneratePresignedUrlDto,
+  ): Promise<{ url: string; key: string }> {
     const codigoIdentificacao = dto.productId ?? randomUUID();
     const key = `products/${codigoIdentificacao}/${dto.fileName}`;
     const url = await this.s3Service.generatePresignedUploadUrl(key, dto.fileType);
@@ -90,6 +92,15 @@ export class ProductsService {
       id: video.id,
       urlS3: this.s3Service.getPublicUrl(video.urlS3),
     };
+  }
+
+  async removeImage(imageId: number): Promise<void> {
+    const image = await this.productImageRepository.findOne({ where: { id: imageId } });
+    if (!image) {
+      throw new CustomError('Image not found.', HttpStatus.NOT_FOUND);
+    }
+    await this.s3Service.deleteFile(image.urlS3);
+    await this.productImageRepository.remove(image);
   }
 
   async sell(id: number): Promise<Product> {

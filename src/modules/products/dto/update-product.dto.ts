@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { MulterFile } from '../../../common/services/s3.service';
 import { ProductCategory } from '../entities/product.entity';
 
 export class UpdateProductDto {
@@ -40,7 +39,4 @@ export class UpdateProductDto {
   @IsString()
   @IsNotEmpty()
   size?: string;
-
-  @ApiPropertyOptional({ type: 'string', format: 'binary', isArray: true, required: false })
-  videos?: MulterFile[];
 }

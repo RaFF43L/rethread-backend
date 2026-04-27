@@ -27,6 +27,7 @@ import {
   FindPaginatedRoute,
   GetDashboardRoute,
   ProductsTag,
+  RemoveProductImageRoute,
   RemoveProductRoute,
   RevertSaleProductRoute,
   SellProductRoute,
@@ -80,12 +81,17 @@ export class ProductsController {
     @Body() dto: UpdateProductDto,
     @UploadedFiles() files: { images?: MulterFile[]; videos?: MulterFile[] },
   ) {
-    return this.productsService.update(id, dto, files.images ?? [], files.videos ?? []);
+    return this.productsService.update(id, dto, files?.images ?? [], files?.videos ?? []);
   }
 
   @RemoveProductRoute()
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.remove(id);
+  }
+
+  @RemoveProductImageRoute()
+  removeImage(@Param('imageId', ParseIntPipe) imageId: number) {
+    return this.productsService.removeImage(imageId);
   }
 
   @FindFilteredRoute()
