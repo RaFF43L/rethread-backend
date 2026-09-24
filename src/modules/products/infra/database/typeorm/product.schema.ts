@@ -11,8 +11,6 @@ import { ProductCategory, ProductStatus } from '../../../domain/entities/product
 import { ProductImageSchema } from './product-image.schema';
 import { ProductVideoSchema } from './product-video.schema';
 
-// TypeORM persistence model for products. Lives in infra so the domain entity
-// stays free of ORM decorators; mapping between the two is manual (product.mapper).
 @Entity('products')
 export class ProductSchema {
   @PrimaryGeneratedColumn()
