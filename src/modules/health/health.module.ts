@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { HealthController } from './health.controller';
-import { HealthService } from './health.service';
+import { GetHealthStatusUseCase } from './application/use-cases/get-health-status.usecase';
+import { HealthController } from './http/health.controller';
 
 @Module({
   controllers: [HealthController],
-  providers: [HealthService],
+  providers: [GetHealthStatusUseCase],
 })
 export class HealthModule {}

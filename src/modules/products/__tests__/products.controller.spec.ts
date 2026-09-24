@@ -1,238 +1,146 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MulterFile } from '../../../common/services/s3.service';
-import { CreateProductDto } from '../dto/create-product.dto';
-import { DashboardFilterDto } from '../dto/dashboard-filter.dto';
-import { UpdateProductDto } from '../dto/update-product.dto';
-import { FilterProductsDto } from '../dto/filter-products.dto';
-import { PaginateProductsDto } from '../dto/paginate-products.dto';
-import { Product, ProductCategory, ProductStatus } from '../entities/product.entity';
-import { ProductsController } from '../products.controller';
-import { PaginatedResult, ProductsService } from '../services/products.service';
-import { ProductsDashboardService } from '../services/products-dashboard.service';
+import { ProductsController } from '../http/products.controller';
+import { ProductCategory } from '../domain/entities/product.entity';
+import type { UploadableFile } from '../domain/ports/file-storage.port';
 
-const mockProductsService = {
-  create: jest.fn(),
-  sell: jest.fn(),
-  revertSale: jest.fn(),
-  remove: jest.fn(),
-  update: jest.fn(),
-  findById: jest.fn(),
-  findByCodigoIdentificacao: jest.fn(),
-  findPaginated: jest.fn(),
-  findGroupedByCategories: jest.fn(),
-  findPaginatedByCategory: jest.fn(),
-  findFiltered: jest.fn(),
-};
-
-const mockProductsDashboardService = {
-  getDashboard: jest.fn(),
-};
-
-const makeProduct = (overrides: Partial<Product> = {}): Product =>
-  ({
-    id: 1,
-    codigoIdentificacao: 'codigo-uuid',
-    cor: 'blue',
-    marca: 'Nike',
-    images: [],
-    status: ProductStatus.AVAILABLE,
-    category: ProductCategory.CALCA,
-    size: 'M',
-    descricao: 'A shoe',
-    preco: 199.99,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: null,
-    ...overrides,
-  }) as Product;
-
+// The controller is a thin HTTP adapter: it must only translate the request and
+// delegate to a single use case. These tests assert that wiring, mocking each
+// use case (the collaborators at the controller boundary).
 describe('ProductsController', () => {
-  let controller: ProductsController;
+  const createProduct = { execute: jest.fn() };
+  const generatePresignedUploadUrl = { execute: jest.fn() };
+  const registerProductImage = { execute: jest.fn() };
+  const registerProductVideo = { execute: jest.fn() };
+  const sellProduct = { execute: jest.fn() };
+  const revertSale = { execute: jest.fn() };
+  const updateProduct = { execute: jest.fn() };
+  const removeProduct = { execute: jest.fn() };
+  const findProductById = { execute: jest.fn() };
+  const findProductByCodigo = { execute: jest.fn() };
+  const findPaginatedProducts = { execute: jest.fn() };
+  const findGroupedByCategories = { execute: jest.fn() };
+  const findPaginatedByCategory = { execute: jest.fn() };
+  const findFilteredProducts = { execute: jest.fn() };
+  const getDashboard = { execute: jest.fn() };
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
+  const controller = new ProductsController(
+    createProduct as never,
+    generatePresignedUploadUrl as never,
+    registerProductImage as never,
+    registerProductVideo as never,
+    sellProduct as never,
+    revertSale as never,
+    updateProduct as never,
+    removeProduct as never,
+    findProductById as never,
+    findProductByCodigo as never,
+    findPaginatedProducts as never,
+    findGroupedByCategories as never,
+    findPaginatedByCategory as never,
+    findFilteredProducts as never,
+    getDashboard as never,
+  );
 
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ProductsController],
-      providers: [
-        { provide: ProductsService, useValue: mockProductsService },
-        { provide: ProductsDashboardService, useValue: mockProductsDashboardService },
-      ],
-    }).compile();
+  beforeEach(() => jest.clearAllMocks());
 
-    controller = module.get<ProductsController>(ProductsController);
+  it('delegates create to CreateProductUseCase', () => {
+    const dto = {
+      cor: 'blue',
+      marca: 'Nike',
+      descricao: 'A shoe',
+      preco: 199.99,
+      category: ProductCategory.CALCA,
+      size: 'M',
+    };
+    void controller.create(dto);
+    expect(createProduct.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('create', () => {
-    it('should call productsService.create with the dto and files', async () => {
-      const dto: CreateProductDto = {
-        cor: 'blue',
-        marca: 'Nike',
-        descricao: 'A shoe',
-        preco: 199.99,
-        category: ProductCategory.CALCA,
-        size: 'M',
-      };
-      const files: MulterFile[] = [
-        { originalname: 'shoe.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('fake-image') },
-      ];
-      const product = makeProduct();
-      mockProductsService.create.mockResolvedValue(product);
-
-      const result = await controller.create(dto, { images: files });
-
-      expect(result).toEqual(product);
-      expect(mockProductsService.create).toHaveBeenCalledWith(dto, files, []);
-    });
+  it('delegates presigned URL generation', () => {
+    const dto = { fileName: 'a.jpg', fileType: 'image/jpeg' };
+    void controller.generatePresignedUploadUrlHandler(dto);
+    expect(generatePresignedUploadUrl.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('sell', () => {
-    it('should call productsService.sell with the id', async () => {
-      const product = makeProduct({ status: ProductStatus.SOLD });
-      mockProductsService.sell.mockResolvedValue(product);
-
-      const result = await controller.sell(1);
-
-      expect(result).toEqual(product);
-      expect(mockProductsService.sell).toHaveBeenCalledWith(1);
-    });
+  it('delegates image registration', () => {
+    const dto = { productId: 'abc', key: 'products/a.jpg' };
+    void controller.registerImage(dto);
+    expect(registerProductImage.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('revertSale', () => {
-    it('should call productsService.revertSale with the id', async () => {
-      const product = makeProduct({ status: ProductStatus.AVAILABLE });
-      mockProductsService.revertSale.mockResolvedValue(product);
-
-      const result = await controller.revertSale(1);
-
-      expect(result).toEqual(product);
-      expect(mockProductsService.revertSale).toHaveBeenCalledWith(1);
-    });
+  it('delegates video registration', () => {
+    const dto = { productId: 'abc', key: 'products/a.mp4' };
+    void controller.registerVideo(dto);
+    expect(registerProductVideo.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('update', () => {
-    it('should call productsService.update with id, dto and files', async () => {
-      const dto: UpdateProductDto = { preco: 249.99, size: 'G' };
-      const files: MulterFile[] = [
-        { originalname: 'img.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('') },
-      ];
-      const updated = makeProduct({ preco: 249.99, size: 'G' });
-      mockProductsService.update.mockResolvedValue(updated);
-
-      const result = await controller.update(1, dto, { images: files });
-
-      expect(result).toEqual(updated);
-      expect(mockProductsService.update).toHaveBeenCalledWith(1, dto, files, []);
-    });
+  it('delegates sell with the parsed id', () => {
+    void controller.sell(1);
+    expect(sellProduct.execute).toHaveBeenCalledWith(1);
   });
 
-  describe('remove', () => {
-    it('should call productsService.remove with the id', async () => {
-      mockProductsService.remove.mockResolvedValue(undefined);
-
-      await controller.remove(1);
-
-      expect(mockProductsService.remove).toHaveBeenCalledWith(1);
-    });
+  it('delegates revert with the parsed id', () => {
+    void controller.revert(1);
+    expect(revertSale.execute).toHaveBeenCalledWith(1);
   });
 
-  describe('findById', () => {
-    it('should call productsService.findById with the id', async () => {
-      const product = makeProduct();
-      mockProductsService.findById.mockResolvedValue(product);
-
-      const result = await controller.findById(1);
-
-      expect(result).toEqual(product);
-      expect(mockProductsService.findById).toHaveBeenCalledWith(1);
-    });
+  it('delegates update with id, dto and split media files', () => {
+    const dto = { preco: 10 };
+    const images: UploadableFile[] = [
+      { originalname: 'i.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('i') },
+    ];
+    const videos: UploadableFile[] = [
+      { originalname: 'v.mp4', mimetype: 'video/mp4', buffer: Buffer.from('v') },
+    ];
+    void controller.update(1, dto, { images, videos });
+    expect(updateProduct.execute).toHaveBeenCalledWith(1, dto, images, videos);
   });
 
-  describe('findByCodigoIdentificacao', () => {
-    it('should call productsService.findByCodigoIdentificacao with the uuid', async () => {
-      const product = makeProduct();
-      mockProductsService.findByCodigoIdentificacao.mockResolvedValue(product);
-
-      const result = await controller.findByCodigoIdentificacao(product.codigoIdentificacao);
-
-      expect(result).toEqual(product);
-      expect(mockProductsService.findByCodigoIdentificacao).toHaveBeenCalledWith(
-        product.codigoIdentificacao,
-      );
-    });
+  it('defaults media arrays to empty when none provided', () => {
+    void controller.update(1, {}, {});
+    expect(updateProduct.execute).toHaveBeenCalledWith(1, {}, [], []);
   });
 
-  describe('findPaginated', () => {
-    it('should call productsService.findPaginated with the dto', async () => {
-      const dto: PaginateProductsDto = { page: 1, limit: 20 };
-      const paginated: PaginatedResult<Product> = { data: [], total: 0, page: 1, limit: 20 };
-      mockProductsService.findPaginated.mockResolvedValue(paginated);
-
-      const result = await controller.findPaginated(dto);
-
-      expect(result).toEqual(paginated);
-      expect(mockProductsService.findPaginated).toHaveBeenCalledWith(dto);
-    });
+  it('delegates remove with the parsed id', () => {
+    void controller.remove(1);
+    expect(removeProduct.execute).toHaveBeenCalledWith(1);
   });
 
-  describe('findGroupedByCategories', () => {
-    it('should call productsService.findGroupedByCategories', async () => {
-      const grouped = [{ category: ProductCategory.CALCA, products: [] }];
-      mockProductsService.findGroupedByCategories.mockResolvedValue(grouped);
-
-      const result = await controller.findGroupedByCategories();
-
-      expect(result).toEqual(grouped);
-      expect(mockProductsService.findGroupedByCategories).toHaveBeenCalled();
-    });
+  it('delegates findFiltered with the query dto', () => {
+    const dto = { size: 'M', page: 1, limit: 10 };
+    void controller.findFiltered(dto);
+    expect(findFilteredProducts.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('findPaginatedByCategory', () => {
-    it('should call productsService.findPaginatedByCategory with category and dto', async () => {
-      const dto: PaginateProductsDto = { page: 1, limit: 20 };
-      const paginated: PaginatedResult<Product> = { data: [], total: 0, page: 1, limit: 20 };
-      mockProductsService.findPaginatedByCategory.mockResolvedValue(paginated);
-
-      const result = await controller.findPaginatedByCategory(ProductCategory.CALCA, dto);
-
-      expect(result).toEqual(paginated);
-      expect(mockProductsService.findPaginatedByCategory).toHaveBeenCalledWith(
-        ProductCategory.CALCA,
-        dto,
-      );
-    });
+  it('delegates dashboard with the query dto', () => {
+    const dto = { category: ProductCategory.CALCA };
+    void controller.dashboard(dto);
+    expect(getDashboard.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('findFiltered', () => {
-    it('should call productsService.findFiltered with the dto', async () => {
-      const dto: FilterProductsDto = { size: 'M', cor: 'blue', page: 1, limit: 20 };
-      const paginated: PaginatedResult<Product> = { data: [], total: 0, page: 1, limit: 20 };
-      mockProductsService.findFiltered.mockResolvedValue(paginated);
-
-      const result = await controller.findFiltered(dto);
-
-      expect(result).toEqual(paginated);
-      expect(mockProductsService.findFiltered).toHaveBeenCalledWith(dto);
-    });
+  it('delegates grouped with no arguments', () => {
+    void controller.grouped();
+    expect(findGroupedByCategories.execute).toHaveBeenCalledWith();
   });
 
-  describe('getDashboard', () => {
-    it('should call productsDashboardService.getDashboard with the dto', async () => {
-      const dto: DashboardFilterDto = { category: ProductCategory.CALCA, size: 'M' };
-      const dashboard = {
-        total: 10,
-        available: 7,
-        sold: 3,
-        totalValue: 999,
-        availableValue: 700,
-        soldValue: 299,
-      };
-      mockProductsDashboardService.getDashboard.mockResolvedValue(dashboard);
+  it('delegates paginatedByCategory with category and dto', () => {
+    const dto = { page: 1, limit: 10 };
+    void controller.paginatedByCategory(ProductCategory.CALCA, dto);
+    expect(findPaginatedByCategory.execute).toHaveBeenCalledWith(ProductCategory.CALCA, dto);
+  });
 
-      const result = await controller.getDashboard(dto);
+  it('delegates findById with the parsed id', () => {
+    void controller.findById(1);
+    expect(findProductById.execute).toHaveBeenCalledWith(1);
+  });
 
-      expect(result).toEqual(dashboard);
-      expect(mockProductsDashboardService.getDashboard).toHaveBeenCalledWith(dto);
-    });
+  it('delegates findByCodigoIdentificacao with the code', () => {
+    void controller.findByCodigoIdentificacao('abc-123');
+    expect(findProductByCodigo.execute).toHaveBeenCalledWith('abc-123');
+  });
+
+  it('delegates findPaginated with the query dto', () => {
+    const dto = { page: 2, limit: 20 };
+    void controller.findPaginated(dto);
+    expect(findPaginatedProducts.execute).toHaveBeenCalledWith(dto);
   });
 });

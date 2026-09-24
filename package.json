@@ -18,10 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migration:generate": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:generate -d src/database/data-source.ts",
-    "migration:run": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
-    "migration:revert": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
-    "migration:show": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:show -d src/database/data-source.ts"
+    "migration:generate": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:generate -d src/common/database/data-source.ts",
+    "migration:run": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:run -d src/common/database/data-source.ts",
+    "migration:revert": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:revert -d src/common/database/data-source.ts",
+    "migration:show": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:show -d src/common/database/data-source.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1006.0",

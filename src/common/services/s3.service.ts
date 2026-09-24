@@ -118,7 +118,11 @@ export class S3Service {
     return Buffer.concat(chunks);
   }
 
-  async generatePresignedUploadUrl(key: string, fileType: string, expiresInSeconds = 600): Promise<string> {
+  async generatePresignedUploadUrl(
+    key: string,
+    fileType: string,
+    expiresInSeconds = 600,
+  ): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,

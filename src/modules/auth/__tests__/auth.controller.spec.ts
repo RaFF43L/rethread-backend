@@ -1,90 +1,51 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from '../auth.controller';
-import { AuthService } from '../auth.service';
+import { AuthController } from '../http/auth.controller';
 
-const mockAuthService = {
-  register: jest.fn(),
-  login: jest.fn(),
-  confirmSignUp: jest.fn(),
-  forgotPassword: jest.fn(),
-  resetPassword: jest.fn(),
-};
-
+// Thin HTTP adapter tests: each handler must delegate to its use case with the
+// request DTO. Use cases are mocked (the controller's collaborators).
 describe('AuthController', () => {
-  let controller: AuthController;
+  const registerUseCase = { execute: jest.fn() };
+  const loginUseCase = { execute: jest.fn() };
+  const confirmSignUpUseCase = { execute: jest.fn() };
+  const forgotPasswordUseCase = { execute: jest.fn() };
+  const resetPasswordUseCase = { execute: jest.fn() };
 
-  beforeEach(async () => {
-    jest.clearAllMocks();
+  const controller = new AuthController(
+    registerUseCase as never,
+    loginUseCase as never,
+    confirmSignUpUseCase as never,
+    forgotPasswordUseCase as never,
+    resetPasswordUseCase as never,
+  );
 
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: mockAuthService }],
-    }).compile();
+  beforeEach(() => jest.clearAllMocks());
 
-    controller = module.get<AuthController>(AuthController);
+  it('delegates register with the dto', () => {
+    const dto = { email: 'a@test.com', name: 'Alice' };
+    void controller.register(dto);
+    expect(registerUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('register', () => {
-    it('should call authService.register with the dto', async () => {
-      const dto = { email: 'test@test.com', password: 'Password@123', name: 'Test User' };
-      mockAuthService.register.mockResolvedValue({
-        message: 'Registration successful.',
-        userId: '1',
-      });
-
-      const result = await controller.register(dto);
-
-      expect(mockAuthService.register).toHaveBeenCalledWith(dto);
-      expect(result.message).toContain('Registration');
-    });
+  it('delegates login with the dto', () => {
+    const dto = { email: 'a@test.com', password: 'x' };
+    void controller.login(dto);
+    expect(loginUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('login', () => {
-    it('should call authService.login with the dto', async () => {
-      const dto = { email: 'test@test.com', password: 'Password@123' };
-      mockAuthService.login.mockResolvedValue({ accessToken: 'token' });
-
-      const result = await controller.login(dto);
-
-      expect(mockAuthService.login).toHaveBeenCalledWith(dto);
-      expect(result.accessToken).toBe('token');
-    });
+  it('delegates confirmSignUp with the dto', () => {
+    const dto = { email: 'a@test.com', code: '123456' };
+    void controller.confirmSignUp(dto);
+    expect(confirmSignUpUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('confirmSignUp', () => {
-    it('should call authService.confirmSignUp with the dto', async () => {
-      const dto = { email: 'test@test.com', code: '123456' };
-      mockAuthService.confirmSignUp.mockResolvedValue({
-        message: 'Account confirmed successfully.',
-      });
-
-      const result = await controller.confirmSignUp(dto);
-
-      expect(mockAuthService.confirmSignUp).toHaveBeenCalledWith(dto);
-      expect(result.message).toContain('confirmed');
-    });
+  it('delegates forgotPassword with the dto', () => {
+    const dto = { email: 'a@test.com' };
+    void controller.forgotPassword(dto);
+    expect(forgotPasswordUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
-  describe('forgotPassword', () => {
-    it('should call authService.forgotPassword with the dto', async () => {
-      const dto = { email: 'test@test.com' };
-      mockAuthService.forgotPassword.mockResolvedValue({ message: 'E-mail enviado.' });
-
-      await controller.forgotPassword(dto);
-
-      expect(mockAuthService.forgotPassword).toHaveBeenCalledWith(dto);
-    });
-  });
-
-  describe('resetPassword', () => {
-    it('should call authService.resetPassword with the dto', async () => {
-      const dto = { email: 'test@test.com', code: '123456', newPassword: 'NewPassword@123' };
-      mockAuthService.resetPassword.mockResolvedValue({ message: 'Password reset successfully.' });
-
-      const result = await controller.resetPassword(dto);
-
-      expect(mockAuthService.resetPassword).toHaveBeenCalledWith(dto);
-      expect(result.message).toContain('Password reset');
-    });
+  it('delegates resetPassword with the dto', () => {
+    const dto = { email: 'a@test.com', code: '654321', newPassword: 'New1!' };
+    void controller.resetPassword(dto);
+    expect(resetPasswordUseCase.execute).toHaveBeenCalledWith(dto);
   });
 });
