@@ -70,12 +70,14 @@ export class CognitoIdentityProvider implements IIdentityProvider {
   private readonly userPoolId: string;
 
   constructor(private readonly config: ConfigService) {
+    const endpoint = this.config.get<string>('AWS_ENDPOINT_URL');
     this.cognito = new CognitoIdentityProviderClient({
       region: this.config.getOrThrow<string>('AWS_REGION'),
       credentials: {
         accessKeyId: this.config.getOrThrow<string>('AWS_ACCESS_KEY_ID_COGNITO'),
         secretAccessKey: this.config.getOrThrow<string>('AWS_SECRET_ACCESS_KEY_COGNITO'),
       },
+      ...(endpoint && { endpoint, forcePathStyle: true }),
     });
     this.clientId = this.config.getOrThrow<string>('COGNITO_CLIENT_ID');
     this.clientSecret = this.config.getOrThrow<string>('COGNITO_CLIENT_SECRET');
