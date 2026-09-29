@@ -47,7 +47,7 @@ describe('Products use cases', () => {
       repository = new FakeProductRepository();
       storage = new FakeFileStorage();
       presenter = new ProductPresenter(storage);
-      const useCase = new CreateProductUseCase(repository, presenter);
+      const useCase = new CreateProductUseCase(repository, presenter, storage);
 
       const result = await useCase.execute({
         cor: 'blue',
@@ -58,11 +58,47 @@ describe('Products use cases', () => {
         size: 'M',
       });
 
-      expect(result.id).toBeDefined();
-      expect(result.status).toBe(ProductStatus.AVAILABLE);
-      expect(result.codigoIdentificacao).toEqual(expect.any(String));
-      expect(result.imageUrls).toEqual([]);
-      await expect(repository.findById(result.id)).resolves.not.toBeNull();
+      expect(result.product.id).toBeDefined();
+      expect(result.product.status).toBe(ProductStatus.AVAILABLE);
+      expect(result.product.codigoIdentificacao).toEqual(expect.any(String));
+      expect(result.product.imageUrls).toEqual([]);
+      expect(result.presignedUrls).toBeUndefined();
+      await expect(repository.findById(result.product.id)).resolves.not.toBeNull();
+    });
+
+    it('returns a presigned URL per media item when media is provided', async () => {
+      repository = new FakeProductRepository();
+      storage = new FakeFileStorage();
+      presenter = new ProductPresenter(storage);
+      const useCase = new CreateProductUseCase(repository, presenter, storage);
+
+      const result = await useCase.execute({
+        cor: 'blue',
+        marca: 'Nike',
+        descricao: 'A shoe',
+        preco: 199.99,
+        category: ProductCategory.CALCA,
+        size: 'M',
+        media: [
+          { fileName: 'foto-1.jpg', fileType: 'image/jpeg' },
+          { fileName: 'foto-2.jpg', fileType: 'image/jpeg' },
+          { fileName: 'video.mp4', fileType: 'video/mp4' },
+        ],
+      });
+
+      expect(result.presignedUrls).toHaveLength(3);
+      expect(result.presignedUrls?.[0].key).toBe(
+        `products/${result.product.codigoIdentificacao}/foto-1.jpg`,
+      );
+      expect(result.presignedUrls?.[1].key).toBe(
+        `products/${result.product.codigoIdentificacao}/foto-2.jpg`,
+      );
+      expect(result.presignedUrls?.[2].key).toBe(
+        `products/${result.product.codigoIdentificacao}/video.mp4`,
+      );
+      expect(result.presignedUrls?.[0].url).toContain('upload/');
+      // A mídia ainda não está vinculada: o vínculo acontece no register-image
+      expect(result.product.images).toEqual([]);
     });
   });
 

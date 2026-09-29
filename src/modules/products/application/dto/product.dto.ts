@@ -3,6 +3,11 @@ import type { ProductCategory, ProductStatus } from '../../domain/entities/produ
 // Application-layer input/output contracts. Pure TypeScript: no framework or
 // validation decorators (those live in the http/ DTOs).
 
+export interface CreateMediaInput {
+  readonly fileName: string;
+  readonly fileType: string;
+}
+
 export interface CreateProductInput {
   readonly cor: string;
   readonly marca: string;
@@ -10,6 +15,12 @@ export interface CreateProductInput {
   readonly preco: number;
   readonly category: ProductCategory;
   readonly size: string;
+  readonly media?: CreateMediaInput[];
+}
+
+export interface CreateProductResult {
+  readonly product: ProductOutput;
+  readonly presignedUrls?: PresignedUrlOutput[];
 }
 
 export interface UpdateProductInput {

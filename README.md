@@ -6,7 +6,7 @@
 
 - **Autenticação completa** via AWS Cognito: cadastro, confirmação, login, recuperação e troca de senha
 - **Catálogo de produtos**: criação, edição, remoção (soft delete), listagem paginada e filtros por categoria
-- **Mídia**: upload de imagens e vídeos para S3, com URLs pré-assinadas (presigned)
+- **Mídia**: upload de imagens e vídeos direto para S3 via URLs pré-assinadas — a criação do produto já retorna uma URL por mídia, e o vínculo ao produto acontece após o upload
 - **Vendas**: registrar e reverter vendas, com painel (dashboard) de métricas
 - **Segurança**: rate limiting, validação estrita de entrada e erros padronizados
 - **Documentação interativa** da API com Swagger
