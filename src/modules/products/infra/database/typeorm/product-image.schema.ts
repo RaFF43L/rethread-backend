@@ -6,7 +6,11 @@ export class ProductImageSchema {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => ProductSchema, (product) => product.images, { onDelete: 'CASCADE' })
+  @ManyToOne(
+    () => ProductSchema,
+    (product) => product.images,
+    { onDelete: 'CASCADE' },
+  )
   product!: ProductSchema;
 
   @Column({ name: 'url_s3' })

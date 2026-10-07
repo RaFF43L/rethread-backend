@@ -8,6 +8,8 @@ describe('AuthController', () => {
   const confirmSignUpUseCase = { execute: jest.fn() };
   const forgotPasswordUseCase = { execute: jest.fn() };
   const resetPasswordUseCase = { execute: jest.fn() };
+  const refreshTokenUseCase = { execute: jest.fn() };
+  const logoutUseCase = { execute: jest.fn() };
 
   const controller = new AuthController(
     registerUseCase as never,
@@ -15,6 +17,8 @@ describe('AuthController', () => {
     confirmSignUpUseCase as never,
     forgotPasswordUseCase as never,
     resetPasswordUseCase as never,
+    refreshTokenUseCase as never,
+    logoutUseCase as never,
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -29,6 +33,18 @@ describe('AuthController', () => {
     const dto = { email: 'a@test.com', password: 'x' };
     void controller.login(dto);
     expect(loginUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates refresh with the dto', () => {
+    const dto = { email: 'a@test.com', refreshToken: 'rt' };
+    void controller.refresh(dto);
+    expect(refreshTokenUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates logout with the dto', () => {
+    const dto = { refreshToken: 'rt' };
+    void controller.logout(dto);
+    expect(logoutUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
   it('delegates confirmSignUp with the dto', () => {

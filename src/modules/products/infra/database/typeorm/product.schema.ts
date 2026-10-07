@@ -25,14 +25,22 @@ export class ProductSchema {
   @Column()
   marca!: string;
 
-  @OneToMany(() => ProductImageSchema, (image) => image.product, {
-    cascade: ['insert', 'update'],
-  })
+  @OneToMany(
+    () => ProductImageSchema,
+    (image) => image.product,
+    {
+      cascade: ['insert', 'update'],
+    },
+  )
   images!: ProductImageSchema[];
 
-  @OneToMany(() => ProductVideoSchema, (video) => video.product, {
-    cascade: ['insert', 'update'],
-  })
+  @OneToMany(
+    () => ProductVideoSchema,
+    (video) => video.product,
+    {
+      cascade: ['insert', 'update'],
+    },
+  )
   videos!: ProductVideoSchema[];
 
   @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.AVAILABLE })

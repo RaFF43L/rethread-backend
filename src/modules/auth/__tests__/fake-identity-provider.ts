@@ -4,6 +4,7 @@ import {
   EmailAlreadyRegisteredError,
   InvalidCodeError,
   InvalidCredentialsError,
+  SessionExpiredError,
 } from '../domain/errors/auth.error';
 import type {
   CreateProviderUserInput,
@@ -28,6 +29,7 @@ export class FakeIdentityProvider implements IIdentityProvider {
   readonly records: FakeProviderRecord[] = [];
   private sequence = 0;
   failCreate = false;
+  readonly revokedTokens = new Set<string>();
 
   seed(record: Partial<FakeProviderRecord> & { email: string }): FakeProviderRecord {
     this.sequence += 1;
@@ -128,6 +130,22 @@ export class FakeIdentityProvider implements IIdentityProvider {
     }
     record.password = newPassword;
     return Promise.resolve();
+  }
+
+  refreshSession(email: string, refreshToken: string): Promise<AuthTokens> {
+    if (!this.find(email) || this.revokedTokens.has(refreshToken)) {
+      return Promise.reject(new SessionExpiredError());
+    }
+    return Promise.resolve({ ...this.tokens(), refreshToken: undefined });
+  }
+
+  revokeRefreshToken(refreshToken: string): Promise<void> {
+    this.revokedTokens.add(refreshToken);
+    return Promise.resolve();
+  }
+
+  isAccessTokenActive(accessToken: string): Promise<boolean> {
+    return Promise.resolve(!this.revokedTokens.has(accessToken));
   }
 
   private tokens(): AuthTokens {

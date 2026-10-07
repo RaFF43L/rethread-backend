@@ -1,5 +1,5 @@
 import { applyDecorators, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../../common/decorators/public.decorator';
 
 export const AuthTag = () => applyDecorators(ApiTags('Auth'));
@@ -21,6 +21,26 @@ export const LoginRoute = () =>
     ApiOperation({ summary: 'Authenticate user and return tokens' }),
     ApiResponse({ status: 200, description: 'Authentication successful.' }),
     ApiResponse({ status: 401, description: 'Invalid credentials.' }),
+  );
+
+export const RefreshTokenRoute = () =>
+  applyDecorators(
+    Post('refresh'),
+    HttpCode(HttpStatus.OK),
+    Public(),
+    ApiOperation({ summary: 'Issue new access/id tokens from a refresh token' }),
+    ApiResponse({ status: 200, description: 'Tokens refreshed.' }),
+    ApiResponse({ status: 401, description: 'Refresh token expired or revoked.' }),
+  );
+
+export const LogoutRoute = () =>
+  applyDecorators(
+    Post('logout'),
+    HttpCode(HttpStatus.OK),
+    ApiBearerAuth(),
+    ApiOperation({ summary: 'Revoke the refresh token and its access tokens' }),
+    ApiResponse({ status: 200, description: 'Logged out.' }),
+    ApiResponse({ status: 401, description: 'Not authenticated.' }),
   );
 
 export const ConfirmSignUpRoute = () =>

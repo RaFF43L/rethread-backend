@@ -12,8 +12,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
           type: 'postgres',
           url,
           entities: [
-            __dirname + '/../../modules/**/entities/*.entity{.ts,.js}',
-            __dirname + '/../../modules/**/infra/database/typeorm/*.schema{.ts,.js}',
+            `${__dirname}/../../modules/**/entities/*.entity{.ts,.js}`,
+            `${__dirname}/../../modules/**/infra/database/typeorm/*.schema{.ts,.js}`,
           ],
           synchronize:
             config.get<string>('DB_SYNCHRONIZE') === 'true' ||

@@ -8,11 +8,11 @@ Sempre que solicitado para buildar o projeto ou rodar testes, execute os passos 
 
 ## Passos
 
-### 1. Lint
+### 1. Lint e formatação (Biome)
 ```bash
-npm run lint
+npm run check
 ```
-- Se houver erros de lint, corrija-os antes de continuar.
+- Se houver erros, rode `npm run check:fix` para aplicar as correções automáticas e corrija manualmente o que restar antes de continuar.
 
 ### 2. Build
 ```bash
@@ -39,6 +39,6 @@ npm run test:cov
 
 ## Critério de sucesso
 O processo só está concluído quando:
-- `npm run lint` → sem erros
+- `npm run check` → sem erros
 - `npm run build` → sem erros
 - `npm test` → **0 failed**, todos os test suites passando

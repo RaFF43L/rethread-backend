@@ -10,7 +10,7 @@ dist/
 .env.*.local
 
 # LocalStack (valores gerados no primeiro boot)
-localstack/output/
+config/localstack/output/
 
 # Cobertura de testes
 coverage/

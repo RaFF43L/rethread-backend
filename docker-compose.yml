@@ -26,8 +26,8 @@ services:
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-rethread-images}
     volumes:
       - localstack_data:/var/lib/localstack
-      - ./localstack/init/ready.d:/etc/localstack/init/ready.d
-      - ./localstack/output:/output
+      - ./config/localstack/init/ready.d:/etc/localstack/init/ready.d
+      - ./config/localstack/output:/output
     healthcheck:
       # Só fica "healthy" depois que o init criou o bucket e gravou o .env.localstack
       test:
@@ -48,7 +48,7 @@ services:
       - path: .env
         required: true
       # Valores do Cognito/S3 gerados pelo LocalStack (criado no primeiro boot)
-      - path: localstack/output/.env.localstack
+      - path: config/localstack/output/.env.localstack
         required: false
     environment:
       PORT: 3001

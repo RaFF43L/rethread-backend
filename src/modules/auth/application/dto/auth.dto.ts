@@ -26,6 +26,15 @@ export interface ResetPasswordInput {
   readonly newPassword: string;
 }
 
+export interface RefreshTokenInput {
+  readonly email: string;
+  readonly refreshToken: string;
+}
+
+export interface LogoutInput {
+  readonly refreshToken: string;
+}
+
 export interface MessageOutput {
   readonly message: string;
 }

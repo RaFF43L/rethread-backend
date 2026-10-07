@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import { CustomError } from '../errors/custom-error';
 import { S3Service } from '../services/s3.service';
 
@@ -35,7 +35,7 @@ const mockConfigService = {
 
 function makeReadable(chunks: string[]): Readable {
   const readable = new Readable({ read() {} });
-  chunks.forEach((c) => readable.push(c));
+  for (const c of chunks) readable.push(c);
   readable.push(null);
   return readable;
 }

@@ -9,6 +9,10 @@ export class ProductVideoSchema {
   @Column({ name: 'url_s3' })
   urlS3!: string;
 
-  @ManyToOne(() => ProductSchema, (product) => product.videos, { onDelete: 'CASCADE' })
+  @ManyToOne(
+    () => ProductSchema,
+    (product) => product.videos,
+    { onDelete: 'CASCADE' },
+  )
   product!: ProductSchema;
 }

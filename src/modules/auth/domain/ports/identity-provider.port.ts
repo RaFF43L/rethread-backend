@@ -36,4 +36,12 @@ export interface IIdentityProvider {
   confirmSignUp(email: string, code: string): Promise<void>;
   forgotPassword(email: string): Promise<void>;
   confirmForgotPassword(email: string, code: string, newPassword: string): Promise<void>;
+  // Exchanges a refresh token for new access/id tokens. Fails with
+  // SessionExpiredError when the refresh token is expired or revoked.
+  refreshSession(email: string, refreshToken: string): Promise<AuthTokens>;
+  // Revokes the refresh token and every access token issued from it.
+  revokeRefreshToken(refreshToken: string): Promise<void>;
+  // Asks the provider whether the access token is still active (not revoked
+  // by logout/global sign-out and the user still exists/is enabled).
+  isAccessTokenActive(accessToken: string): Promise<boolean>;
 }

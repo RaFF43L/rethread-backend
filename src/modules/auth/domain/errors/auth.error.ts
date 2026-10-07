@@ -91,6 +91,14 @@ export class UnexpectedChallengeError extends AppError {
   }
 }
 
+export class SessionExpiredError extends AppError {
+  readonly statusCode = 401;
+  readonly code = 'SESSION_EXPIRED';
+  constructor() {
+    super('Session expired or revoked. Please log in again.');
+  }
+}
+
 export class AuthInternalError extends AppError {
   readonly statusCode = 500;
   readonly code = 'AUTH_INTERNAL_ERROR';

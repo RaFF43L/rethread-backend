@@ -7,7 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import { CustomError } from '../errors/custom-error';
 
 export interface MulterFile {
@@ -22,7 +22,7 @@ export class S3Service {
   private readonly bucket: string;
   private readonly publicBaseUrl: string;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(config: ConfigService) {
     const endpoint = config.get<string>('AWS_ENDPOINT_URL');
     const region = config.getOrThrow<string>('AWS_REGION');
     const bucket = config.getOrThrow<string>('AWS_BUCKET_NAME');

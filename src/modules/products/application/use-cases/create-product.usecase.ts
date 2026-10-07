@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { Product } from '../../domain/entities/product.entity';
 import { type IProductRepository, PRODUCT_REPOSITORY } from '../../domain/ports/product.repository';
 import { FILE_STORAGE, type IFileStorage } from '../../domain/ports/file-storage.port';

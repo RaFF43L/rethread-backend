@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { FILE_STORAGE, type IFileStorage } from '../../domain/ports/file-storage.port';
 import type { GeneratePresignedUrlInput, PresignedUrlOutput } from '../dto/product.dto';
 

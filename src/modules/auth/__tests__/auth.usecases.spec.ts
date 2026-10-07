@@ -3,11 +3,14 @@ import { LoginUseCase } from '../application/use-cases/login.usecase';
 import { ConfirmSignUpUseCase } from '../application/use-cases/confirm-signup.usecase';
 import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.usecase';
 import { ResetPasswordUseCase } from '../application/use-cases/reset-password.usecase';
+import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.usecase';
+import { LogoutUseCase } from '../application/use-cases/logout.usecase';
 import {
   AccountNotConfirmedError,
   AuthInternalError,
   InvalidCodeError,
   NewPasswordRequiredError,
+  SessionExpiredError,
 } from '../domain/errors/auth.error';
 import { FakeIdentityProvider } from './fake-identity-provider';
 import { FakeUserRepository } from './fake-user.repository';
@@ -90,6 +93,43 @@ describe('Auth use cases', () => {
       await expect(
         useCase.execute({ email: 'a@test.com', password: 'Temp1234!' }),
       ).rejects.toBeInstanceOf(NewPasswordRequiredError);
+    });
+  });
+
+  describe('RefreshTokenUseCase', () => {
+    it('returns new tokens and keeps the refresh token when none is rotated', async () => {
+      provider.seed({ email: 'a@test.com' });
+      const useCase = new RefreshTokenUseCase(provider);
+
+      const tokens = await useCase.execute({ email: 'a@test.com', refreshToken: 'rt-1' });
+
+      expect(tokens.accessToken).toBe('access-token');
+      expect(tokens.refreshToken).toBe('rt-1');
+    });
+
+    it('rejects a revoked refresh token', async () => {
+      provider.seed({ email: 'a@test.com' });
+      provider.revokedTokens.add('rt-1');
+      const useCase = new RefreshTokenUseCase(provider);
+
+      await expect(
+        useCase.execute({ email: 'a@test.com', refreshToken: 'rt-1' }),
+      ).rejects.toBeInstanceOf(SessionExpiredError);
+    });
+  });
+
+  describe('LogoutUseCase', () => {
+    it('revokes the refresh token so it can no longer be used', async () => {
+      provider.seed({ email: 'a@test.com' });
+      const logout = new LogoutUseCase(provider);
+      const refresh = new RefreshTokenUseCase(provider);
+
+      const result = await logout.execute({ refreshToken: 'rt-1' });
+
+      expect(result.message).toContain('Logged out');
+      await expect(
+        refresh.execute({ email: 'a@test.com', refreshToken: 'rt-1' }),
+      ).rejects.toBeInstanceOf(SessionExpiredError);
     });
   });
 

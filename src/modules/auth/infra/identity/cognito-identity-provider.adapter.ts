@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import {
   AdminCreateUserCommand,
   AdminDeleteUserCommand,
@@ -12,6 +12,8 @@ import {
   ConfirmForgotPasswordCommand,
   ConfirmSignUpCommand,
   ForgotPasswordCommand,
+  GetUserCommand,
+  RevokeTokenCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import type { AuthTokens } from '../../domain/entities/auth-tokens.entity';
 import {
@@ -23,6 +25,7 @@ import {
   InvalidCodeError,
   InvalidCredentialsError,
   InvalidPasswordError,
+  SessionExpiredError,
   TooManyAttemptsError,
   UnexpectedChallengeError,
   UserNotFoundError,
@@ -99,7 +102,10 @@ export class CognitoIdentityProvider implements IIdentityProvider {
         }),
       );
 
-      const providerId = result.User!.Attributes!.find((a) => a.Name === 'sub')!.Value!;
+      const providerId = result.User?.Attributes?.find((a) => a.Name === 'sub')?.Value;
+      if (!providerId) {
+        throw new AuthInternalError('Identity provider did not return a user id.');
+      }
       return { providerId };
     } catch (error) {
       throw translateCognitoError(error);
@@ -230,6 +236,69 @@ export class CognitoIdentityProvider implements IIdentityProvider {
         }),
       );
     } catch (error) {
+      throw translateCognitoError(error);
+    }
+  }
+
+  async refreshSession(email: string, refreshToken: string): Promise<AuthTokens> {
+    try {
+      const result = await this.cognito.send(
+        new AdminInitiateAuthCommand({
+          AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
+          UserPoolId: this.userPoolId,
+          ClientId: this.clientId,
+          AuthParameters: {
+            REFRESH_TOKEN: refreshToken,
+            SECRET_HASH: this.generateSecretHash(email),
+          },
+        }),
+      );
+
+      if (!result.AuthenticationResult) {
+        throw new SessionExpiredError();
+      }
+
+      return {
+        accessToken: result.AuthenticationResult.AccessToken,
+        idToken: result.AuthenticationResult.IdToken,
+        refreshToken: result.AuthenticationResult.RefreshToken,
+        expiresIn: result.AuthenticationResult.ExpiresIn,
+      };
+    } catch (error) {
+      if (error instanceof SessionExpiredError) throw error;
+      // Expired/revoked refresh token (or one belonging to another user).
+      if ((error as { name?: string }).name === 'NotAuthorizedException') {
+        throw new SessionExpiredError();
+      }
+      throw translateCognitoError(error);
+    }
+  }
+
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    try {
+      await this.cognito.send(
+        new RevokeTokenCommand({
+          ClientId: this.clientId,
+          ClientSecret: this.clientSecret,
+          Token: refreshToken,
+        }),
+      );
+    } catch (error) {
+      throw translateCognitoError(error);
+    }
+  }
+
+  async isAccessTokenActive(accessToken: string): Promise<boolean> {
+    try {
+      // GetUser is evaluated by Cognito against its revocation list, unlike a
+      // local JWT signature check.
+      await this.cognito.send(new GetUserCommand({ AccessToken: accessToken }));
+      return true;
+    } catch (error) {
+      const name = (error as { name?: string }).name;
+      if (name === 'NotAuthorizedException' || name === 'UserNotFoundException') {
+        return false;
+      }
       throw translateCognitoError(error);
     }
   }
