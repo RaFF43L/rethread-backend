@@ -9,5 +9,5 @@ export interface IUserRepository {
   create(user: User): Promise<User>;
   update(user: User): Promise<User>;
   findByEmail(email: string): Promise<User | null>;
-  findByCognitoId(cognitoId: string): Promise<User | null>;
+  findByProviderId(providerId: string): Promise<User | null>;
 }

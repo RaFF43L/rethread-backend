@@ -10,6 +10,7 @@ import { AppErrorFilter } from './shared/http/app-error.filter';
 import { CognitoAuthGuard } from './common/guards/cognito-auth.guard';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { HealthModule } from './modules/health/health.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { HealthModule } from './modules/health/health.module';
     ProductsModule,
     UsersModule,
     HealthModule,
+    FavoritesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AppErrorFilter },

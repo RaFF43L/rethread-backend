@@ -8,7 +8,6 @@ import {
 } from '../../domain/ports/identity-provider.port';
 import type { MessageOutput, RegisterInput } from '../dto/auth.dto';
 
-
 @Injectable()
 export class RegisterUseCase {
   private readonly logger = new Logger(RegisterUseCase.name);
@@ -21,7 +20,6 @@ export class RegisterUseCase {
   ) {}
 
   async execute(input: RegisterInput): Promise<MessageOutput> {
-
     if (await this.userRepository.findByEmail(input.email)) {
       throw new EmailAlreadyRegisteredError();
     }
@@ -33,7 +31,7 @@ export class RegisterUseCase {
 
     try {
       await this.userRepository.create(
-        User.create({ email: input.email, name: input.name, cognitoId: providerId }),
+        User.create({ email: input.email, name: input.name, providerId: providerId }),
       );
     } catch (error) {
       this.logger.error(

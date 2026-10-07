@@ -24,7 +24,7 @@ export class GoogleSignInUseCase {
   async execute(input: FederatedSignInInput): Promise<FederatedSignInOutput> {
     const { tokens, identity } = await this.identityProvider.exchangeAuthorizationCode(input.code);
 
-    const existingUser = await this.userRepository.findByCognitoId(identity.providerId);
+    const existingUser = await this.userRepository.findByProviderId(identity.providerId);
     if (existingUser) {
       await this.refreshProfile(existingUser, identity);
       return {
@@ -52,7 +52,7 @@ export class GoogleSignInUseCase {
         User.create({
           email: identity.email,
           name: identity.name,
-          cognitoId: identity.providerId,
+          providerId: identity.providerId,
           pictureUrl: identity.pictureUrl,
         }),
       );

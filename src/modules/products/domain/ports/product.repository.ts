@@ -28,6 +28,7 @@ export interface IProductRepository {
   save(product: Product): Promise<Product>;
   softRemove(product: Product): Promise<void>;
   findById(id: number): Promise<Product | null>;
+  findByIds(ids: number[]): Promise<Product[]>;
   findByCodigoIdentificacao(codigoIdentificacao: string): Promise<Product | null>;
   findPaginated(query: PageQuery): Promise<Page<Product>>;
   findAvailable(): Promise<Product[]>;

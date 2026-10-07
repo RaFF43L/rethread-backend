@@ -30,7 +30,7 @@ export class LoginUseCase {
 
     const user =
       (await this.userRepository.findByEmail(input.email)) ??
-      User.create({ email: input.email, name: input.email, cognitoId: '' });
+      User.create({ email: input.email, name: input.email, providerId: '' });
 
     return { ...toSessionTokens(tokens), user: toAuthenticatedUser(user, tokens.groups) };
   }

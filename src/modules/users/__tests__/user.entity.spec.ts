@@ -2,11 +2,11 @@ import { User } from '../domain/entities/user.entity';
 
 describe('User entity', () => {
   it('create builds a user from props', () => {
-    const user = User.create({ email: 'a@test.com', name: 'Alice', cognitoId: 'sub-1' });
+    const user = User.create({ email: 'a@test.com', name: 'Alice', providerId: 'sub-1' });
 
     expect(user.email).toBe('a@test.com');
     expect(user.name).toBe('Alice');
-    expect(user.cognitoId).toBe('sub-1');
+    expect(user.providerId).toBe('sub-1');
     expect(user.id).toBeUndefined();
   });
 
@@ -16,13 +16,13 @@ describe('User entity', () => {
       id: 5,
       email: 'a@test.com',
       name: 'Alice',
-      cognito_id: 'sub-1',
+      provider_id: 'sub-1',
       created_at: created,
       updated_at: created,
     });
 
     expect(user.id).toBe(5);
-    expect(user.cognitoId).toBe('sub-1');
+    expect(user.providerId).toBe('sub-1');
     expect(user.createdAt).toBe(created);
   });
 });

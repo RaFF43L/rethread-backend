@@ -31,8 +31,8 @@ export class TypeOrmUserRepository implements IUserRepository {
     return row === null ? null : toDomain(row);
   }
 
-  async findByCognitoId(cognitoId: string): Promise<User | null> {
-    const row = await this.users.findOne({ where: { cognitoId } });
+  async findByProviderId(providerId: string): Promise<User | null> {
+    const row = await this.users.findOne({ where: { providerId } });
     return row === null ? null : toDomain(row);
   }
 }

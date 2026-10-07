@@ -45,14 +45,11 @@ const makeContext = (
   mockReflector.getAllAndOverride.mockImplementation((key: string) =>
     key === IS_PUBLIC_KEY ? (isPublic ?? false) : (isAnyAuthenticated ?? false),
   );
+  const request = { headers: { authorization: token ? `Bearer ${token}` : undefined } };
   return {
     getHandler: jest.fn(),
     getClass: jest.fn(),
-    switchToHttp: () => ({
-      getRequest: () => ({
-        headers: { authorization: token ? `Bearer ${token}` : undefined },
-      }),
-    }),
+    switchToHttp: () => ({ getRequest: () => request }),
   } as unknown as ExecutionContext;
 };
 
@@ -130,6 +127,23 @@ describe('CognitoAuthGuard', () => {
     });
     const ctx = makeContext('user.jwt.token', false, true);
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
+  });
+
+  it('should attach the token subject and groups to the request', async () => {
+    (jwtVerify as jest.Mock).mockResolvedValue({ payload: accessPayload });
+    const ctx = makeContext('valid.jwt.token');
+    await guard.canActivate(ctx);
+    expect(ctx.switchToHttp().getRequest().user).toEqual({
+      providerId: 'user-id',
+      groups: ['@admin'],
+    });
+  });
+
+  it('should reject an access token without a subject', async () => {
+    const { sub: _sub, ...withoutSub } = accessPayload;
+    (jwtVerify as jest.Mock).mockResolvedValue({ payload: withoutSub });
+    const ctx = makeContext('nosub.jwt.token');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
   });
 
   it('should reject a revoked access token (after logout)', async () => {

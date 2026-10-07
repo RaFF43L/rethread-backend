@@ -51,7 +51,7 @@ describe('Auth use cases', () => {
 
     it('rejects an email already registered locally (e.g. via Google)', async () => {
       await users.create(
-        User.create({ email: 'a@test.com', name: 'Alice', cognitoId: 'google-sub' }),
+        User.create({ email: 'a@test.com', name: 'Alice', providerId: 'google-sub' }),
       );
       const useCase = new RegisterUseCase(provider, users);
 
@@ -111,7 +111,7 @@ describe('Auth use cases', () => {
           pictureUrl: 'https://pics.test/grace-new.jpg',
         },
       });
-      const user = await users.findByCognitoId('google-sub-1');
+      const user = await users.findByProviderId('google-sub-1');
       expect(user).toMatchObject({ email: 'g@test.com', name: 'Grace' });
     });
 
@@ -120,7 +120,7 @@ describe('Auth use cases', () => {
         User.create({
           email: 'g@test.com',
           name: 'Grace Hopper',
-          cognitoId: 'google-sub-1',
+          providerId: 'google-sub-1',
           pictureUrl: 'https://pics.test/grace-old.jpg',
         }),
       );
@@ -142,7 +142,7 @@ describe('Auth use cases', () => {
 
     it('replaces the email fallback name once the provider sends a real name', async () => {
       await users.create(
-        User.create({ email: 'g@test.com', name: 'g@test.com', cognitoId: 'google-sub-1' }),
+        User.create({ email: 'g@test.com', name: 'g@test.com', providerId: 'google-sub-1' }),
       );
       const useCase = new GoogleSignInUseCase(provider, users);
 
@@ -154,7 +154,7 @@ describe('Auth use cases', () => {
 
     it('rejects an email owned by a password account and removes the federated user', async () => {
       await users.create(
-        User.create({ email: 'g@test.com', name: 'Grace', cognitoId: 'native-sub' }),
+        User.create({ email: 'g@test.com', name: 'Grace', providerId: 'native-sub' }),
       );
       const useCase = new GoogleSignInUseCase(provider, users);
 
@@ -194,7 +194,7 @@ describe('Auth use cases', () => {
     it('returns the local user with its groups', async () => {
       provider.seed({ email: 'a@test.com', status: 'CONFIRMED', password: 'Secret1!' });
       provider.groups = ['@admin'];
-      await users.create(User.create({ email: 'a@test.com', name: 'Alice', cognitoId: 'sub-a' }));
+      await users.create(User.create({ email: 'a@test.com', name: 'Alice', providerId: 'sub-a' }));
       const useCase = new LoginUseCase(provider, users);
 
       const result = await useCase.execute({ email: 'a@test.com', password: 'Secret1!' });

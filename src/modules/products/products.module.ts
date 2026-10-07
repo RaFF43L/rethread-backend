@@ -61,5 +61,6 @@ const useCases = [
     { provide: PRODUCT_DASHBOARD_QUERY, useClass: TypeOrmProductDashboardQuery },
     { provide: FILE_STORAGE, useClass: S3FileStorageAdapter },
   ],
+  exports: [PRODUCT_REPOSITORY, ProductPresenter],
 })
 export class ProductsModule {}

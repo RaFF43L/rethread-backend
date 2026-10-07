@@ -7,7 +7,7 @@ export function toDomain(schema: UserSchema): User {
     id: schema.id,
     email: schema.email,
     name: schema.name,
-    cognito_id: schema.cognitoId,
+    provider_id: schema.providerId,
     picture_url: schema.pictureUrl,
     created_at: schema.createdAt,
     updated_at: schema.updatedAt,
@@ -18,7 +18,7 @@ export function toPersistence(entity: User): Partial<UserSchema> {
   return {
     email: entity.email,
     name: entity.name,
-    cognitoId: entity.cognitoId,
+    providerId: entity.providerId,
     pictureUrl: entity.pictureUrl,
   };
 }

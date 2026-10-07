@@ -27,7 +27,7 @@ export class FakeUserRepository implements IUserRepository {
     return Promise.resolve(this.users.find((u) => u.email === email) ?? null);
   }
 
-  findByCognitoId(cognitoId: string): Promise<User | null> {
-    return Promise.resolve(this.users.find((u) => u.cognitoId === cognitoId) ?? null);
+  findByProviderId(providerId: string): Promise<User | null> {
+    return Promise.resolve(this.users.find((u) => u.providerId === providerId) ?? null);
   }
 }

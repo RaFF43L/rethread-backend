@@ -39,6 +39,10 @@ export class FakeProductRepository implements IProductRepository {
     return Promise.resolve(this.products.find((p) => p.id === id) ?? null);
   }
 
+  findByIds(ids: number[]): Promise<Product[]> {
+    return Promise.resolve(this.products.filter((p) => p.id !== undefined && ids.includes(p.id)));
+  }
+
   findByCodigoIdentificacao(codigoIdentificacao: string): Promise<Product | null> {
     return Promise.resolve(
       this.products.find((p) => p.codigoIdentificacao === codigoIdentificacao) ?? null,

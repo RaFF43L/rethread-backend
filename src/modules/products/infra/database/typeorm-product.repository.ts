@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, ILike, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, ILike, In, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import type { Page, PageQuery } from '../../../../shared/kernel/pagination';
 import { Product, ProductCategory, ProductStatus } from '../../domain/entities/product.entity';
 import { ProductImage } from '../../domain/entities/product-image.entity';
@@ -54,6 +54,12 @@ export class TypeOrmProductRepository implements IProductRepository {
   async findById(id: number): Promise<Product | null> {
     const row = await this.products.findOne({ where: { id }, relations: MEDIA_RELATIONS });
     return row === null ? null : toDomain(row);
+  }
+
+  async findByIds(ids: number[]): Promise<Product[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.products.find({ where: { id: In(ids) }, relations: MEDIA_RELATIONS });
+    return rows.map(toDomain);
   }
 
   async findByCodigoIdentificacao(codigoIdentificacao: string): Promise<Product | null> {

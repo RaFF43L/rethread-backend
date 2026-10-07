@@ -11,6 +11,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { IS_ANY_AUTHENTICATED_KEY } from '../decorators/any-authenticated.decorator';
+import type { AuthenticatedRequest } from '../decorators/current-user.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import {
   IDENTITY_PROVIDER,
@@ -45,17 +46,23 @@ export class CognitoAuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractToken(request);
     if (!token) throw new UnauthorizedException();
 
     // 1. Signature, issuer and expiration (local, cheap).
+    let providerId: string;
     let groups: string[];
     try {
       const { payload } = await jwtVerify(token, this.jwks, { issuer: this.issuer });
-      if (payload.token_use !== 'access' || payload.client_id !== this.clientId) {
+      if (
+        payload.token_use !== 'access' ||
+        payload.client_id !== this.clientId ||
+        typeof payload.sub !== 'string'
+      ) {
         throw new Error('Not an access token for this client');
       }
+      providerId = payload.sub;
       groups = Array.isArray(payload['cognito:groups']) ? payload['cognito:groups'] : [];
     } catch {
       throw new UnauthorizedException();
@@ -77,6 +84,7 @@ export class CognitoAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
+    request.user = { providerId, groups };
     return true;
   }
 
