@@ -100,6 +100,11 @@ describe('ProductsController', () => {
     expect(updateProduct.execute).toHaveBeenCalledWith(1, {}, [], []);
   });
 
+  it('handles JSON updates where multer leaves files undefined', () => {
+    void controller.update(1, { preco: 10 }, undefined);
+    expect(updateProduct.execute).toHaveBeenCalledWith(1, { preco: 10 }, [], []);
+  });
+
   it('delegates remove with the parsed id', () => {
     void controller.remove(1);
     expect(removeProduct.execute).toHaveBeenCalledWith(1);

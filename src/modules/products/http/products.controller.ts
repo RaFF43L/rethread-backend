@@ -106,9 +106,10 @@ export class ProductsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateProductDto,
-    @UploadedFiles() files: { images?: UploadableFile[]; videos?: UploadableFile[] },
+    // Multer only populates files on multipart requests; JSON bodies leave it undefined.
+    @UploadedFiles() files?: { images?: UploadableFile[]; videos?: UploadableFile[] },
   ) {
-    return this.updateProduct.execute(id, dto, files.images ?? [], files.videos ?? []);
+    return this.updateProduct.execute(id, dto, files?.images ?? [], files?.videos ?? []);
   }
 
   @RemoveProductRoute()
