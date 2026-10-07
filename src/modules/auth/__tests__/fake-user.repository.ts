@@ -17,6 +17,12 @@ export class FakeUserRepository implements IUserRepository {
     return Promise.resolve(user);
   }
 
+  update(user: User): Promise<User> {
+    const index = this.users.findIndex((u) => u.id === user.id);
+    this.users[index] = user;
+    return Promise.resolve(user);
+  }
+
   findByEmail(email: string): Promise<User | null> {
     return Promise.resolve(this.users.find((u) => u.email === email) ?? null);
   }

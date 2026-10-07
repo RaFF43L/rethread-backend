@@ -15,6 +15,7 @@ import {
   GetUserCommand,
   RevokeTokenCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { decodeJwt, type JWTPayload } from 'jose';
 import type { AuthTokens } from '../../domain/entities/auth-tokens.entity';
 import {
   AccountNotConfirmedError,
@@ -23,6 +24,7 @@ import {
   CodeExpiredError,
   EmailAlreadyRegisteredError,
   InvalidCodeError,
+  InvalidAuthorizationCodeError,
   InvalidCredentialsError,
   InvalidPasswordError,
   SessionExpiredError,
@@ -33,9 +35,37 @@ import {
 import {
   CreateProviderUserInput,
   CreateProviderUserResult,
+  FederatedIdentity,
+  FederatedProvider,
+  FederatedSession,
   IIdentityProvider,
   ProviderUserStatus,
 } from '../../domain/ports/identity-provider.port';
+
+interface OAuthTokenResponse {
+  access_token?: string;
+  id_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  error?: string;
+}
+
+interface CognitoIdTokenClaims extends JWTPayload {
+  email?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  'cognito:username'?: string;
+}
+
+// Informational copy for the client (e.g. to show admin screens); authorization
+// itself is enforced by the auth guard on the signed access token.
+function groupsFromAccessToken(accessToken: string | undefined): string[] {
+  if (!accessToken) return [];
+  const groups = decodeJwt(accessToken)['cognito:groups'];
+  return Array.isArray(groups) ? groups.filter((g): g is string => typeof g === 'string') : [];
+}
 
 // Translates a provider-specific (Cognito) failure into a domain AppError.
 function translateCognitoError(error: unknown): Error {
@@ -112,9 +142,9 @@ export class CognitoIdentityProvider implements IIdentityProvider {
     }
   }
 
-  async deleteUser(email: string): Promise<void> {
+  async deleteUser(username: string): Promise<void> {
     await this.cognito.send(
-      new AdminDeleteUserCommand({ UserPoolId: this.userPoolId, Username: email }),
+      new AdminDeleteUserCommand({ UserPoolId: this.userPoolId, Username: username }),
     );
   }
 
@@ -153,6 +183,7 @@ export class CognitoIdentityProvider implements IIdentityProvider {
         idToken: result.AuthenticationResult.IdToken,
         refreshToken: result.AuthenticationResult.RefreshToken,
         expiresIn: result.AuthenticationResult.ExpiresIn,
+        groups: groupsFromAccessToken(result.AuthenticationResult.AccessToken),
       };
     } catch (error) {
       if (error instanceof AuthenticationFailedError) throw error;
@@ -263,6 +294,7 @@ export class CognitoIdentityProvider implements IIdentityProvider {
         idToken: result.AuthenticationResult.IdToken,
         refreshToken: result.AuthenticationResult.RefreshToken,
         expiresIn: result.AuthenticationResult.ExpiresIn,
+        groups: groupsFromAccessToken(result.AuthenticationResult.AccessToken),
       };
     } catch (error) {
       if (error instanceof SessionExpiredError) throw error;
@@ -301,6 +333,85 @@ export class CognitoIdentityProvider implements IIdentityProvider {
       }
       throw translateCognitoError(error);
     }
+  }
+
+  getFederatedAuthorizationUrl(provider: FederatedProvider, state: string): string {
+    const url = new URL(`${this.oauthDomain()}/oauth2/authorize`);
+    url.search = new URLSearchParams({
+      response_type: 'code',
+      client_id: this.clientId,
+      redirect_uri: this.oauthRedirectUri(),
+      identity_provider: provider,
+      // aws.cognito.signin.user.admin lets the auth guard validate the access
+      // token through GetUser (revocation check).
+      scope: 'openid email profile aws.cognito.signin.user.admin',
+      state,
+    }).toString();
+    return url.toString();
+  }
+
+  async exchangeAuthorizationCode(code: string): Promise<FederatedSession> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.oauthDomain()}/oauth2/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: this.clientId,
+          code,
+          redirect_uri: this.oauthRedirectUri(),
+        }),
+      });
+    } catch {
+      throw new AuthInternalError();
+    }
+
+    const body = (await response.json().catch(() => ({}))) as OAuthTokenResponse;
+    if (!response.ok || !body.id_token) {
+      if (body.error === 'invalid_grant') throw new InvalidAuthorizationCodeError();
+      throw new AuthInternalError();
+    }
+
+    return {
+      tokens: {
+        accessToken: body.access_token,
+        idToken: body.id_token,
+        refreshToken: body.refresh_token,
+        expiresIn: body.expires_in,
+        groups: groupsFromAccessToken(body.access_token),
+      },
+      identity: this.identityFromIdToken(body.id_token),
+    };
+  }
+
+  private identityFromIdToken(idToken: string): FederatedIdentity {
+    // The token was received directly from the Cognito token endpoint over TLS
+    // using the client secret, so OIDC allows skipping signature validation.
+    const claims = decodeJwt<CognitoIdTokenClaims>(idToken);
+    if (!claims.sub || !claims['cognito:username'] || !claims.email) {
+      // Usually a missing attribute mapping (Google email -> email) in the pool.
+      throw new AuthInternalError('Identity provider did not return the user email.');
+    }
+    const fullName = [claims.given_name, claims.family_name].filter(Boolean).join(' ');
+    return {
+      providerId: claims.sub,
+      username: claims['cognito:username'],
+      email: claims.email,
+      name: claims.name || fullName || claims.email,
+      pictureUrl: claims.picture || null,
+    };
+  }
+
+  private oauthDomain(): string {
+    return this.config.getOrThrow<string>('COGNITO_DOMAIN').replace(/\/+$/, '');
+  }
+
+  private oauthRedirectUri(): string {
+    return this.config.getOrThrow<string>('COGNITO_OAUTH_REDIRECT_URI');
   }
 
   private generateSecretHash(username: string): string {

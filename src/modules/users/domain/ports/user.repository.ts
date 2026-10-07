@@ -7,6 +7,7 @@ export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 // interface only; the concrete TypeORM repository lives in infra.
 export interface IUserRepository {
   create(user: User): Promise<User>;
+  update(user: User): Promise<User>;
   findByEmail(email: string): Promise<User | null>;
   findByCognitoId(cognitoId: string): Promise<User | null>;
 }

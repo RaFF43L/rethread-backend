@@ -2,6 +2,7 @@ import type { AuthTokens } from '../domain/entities/auth-tokens.entity';
 import {
   AccountNotConfirmedError,
   EmailAlreadyRegisteredError,
+  InvalidAuthorizationCodeError,
   InvalidCodeError,
   InvalidCredentialsError,
   SessionExpiredError,
@@ -9,6 +10,9 @@ import {
 import type {
   CreateProviderUserInput,
   CreateProviderUserResult,
+  FederatedIdentity,
+  FederatedProvider,
+  FederatedSession,
   IIdentityProvider,
   ProviderUserStatus,
 } from '../domain/ports/identity-provider.port';
@@ -29,7 +33,10 @@ export class FakeIdentityProvider implements IIdentityProvider {
   readonly records: FakeProviderRecord[] = [];
   private sequence = 0;
   failCreate = false;
+  groups: string[] = [];
   readonly revokedTokens = new Set<string>();
+  // Authorization code -> identity the provider returns when it is exchanged.
+  readonly federatedCodes = new Map<string, FederatedIdentity>();
 
   seed(record: Partial<FakeProviderRecord> & { email: string }): FakeProviderRecord {
     this.sequence += 1;
@@ -65,8 +72,10 @@ export class FakeIdentityProvider implements IIdentityProvider {
     return Promise.resolve({ providerId });
   }
 
-  deleteUser(email: string): Promise<void> {
-    const index = this.records.findIndex((r) => r.email === email);
+  // Records are keyed by email for native users and by provider username for
+  // federated ones, mirroring the provider's Username.
+  deleteUser(username: string): Promise<void> {
+    const index = this.records.findIndex((r) => r.email === username);
     if (index >= 0) {
       this.records.splice(index, 1);
     }
@@ -148,12 +157,35 @@ export class FakeIdentityProvider implements IIdentityProvider {
     return Promise.resolve(!this.revokedTokens.has(accessToken));
   }
 
+  getFederatedAuthorizationUrl(provider: FederatedProvider, state: string): string {
+    return `https://auth.test/oauth2/authorize?identity_provider=${provider}&state=${state}`;
+  }
+
+  // Simulates the provider creating the federated user on its first sign-in.
+  exchangeAuthorizationCode(code: string): Promise<FederatedSession> {
+    const identity = this.federatedCodes.get(code);
+    if (!identity) {
+      return Promise.reject(new InvalidAuthorizationCodeError());
+    }
+    this.federatedCodes.delete(code);
+    if (!this.records.some((r) => r.email === identity.username)) {
+      this.records.push({
+        email: identity.username,
+        name: identity.name,
+        providerId: identity.providerId,
+        status: 'EXTERNAL_PROVIDER',
+      });
+    }
+    return Promise.resolve({ tokens: this.tokens(), identity });
+  }
+
   private tokens(): AuthTokens {
     return {
       accessToken: 'access-token',
       idToken: 'id-token',
       refreshToken: 'refresh-token',
       expiresIn: 3600,
+      groups: [...this.groups],
     };
   }
 }

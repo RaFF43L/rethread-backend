@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { User } from '../../../users/domain/entities/user.entity';
+import { type IUserRepository, USER_REPOSITORY } from '../../../users/domain/ports/user.repository';
 import type { AuthTokens } from '../../domain/entities/auth-tokens.entity';
 import {
   AccountNotConfirmedError,
@@ -9,7 +11,8 @@ import {
   IDENTITY_PROVIDER,
   type IIdentityProvider,
 } from '../../domain/ports/identity-provider.port';
-import type { LoginInput } from '../dto/auth.dto';
+import { toAuthenticatedUser, toSessionTokens } from '../auth.presenter';
+import type { LoginInput, LoginOutput } from '../dto/auth.dto';
 
 // Authenticates a user, branching on the provider account status. Handles the
 // FORCE_CHANGE_PASSWORD challenge when a new password is supplied.
@@ -18,9 +21,21 @@ export class LoginUseCase {
   constructor(
     @Inject(IDENTITY_PROVIDER)
     private readonly identityProvider: IIdentityProvider,
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
   ) {}
 
-  async execute(input: LoginInput): Promise<AuthTokens> {
+  async execute(input: LoginInput): Promise<LoginOutput> {
+    const tokens = await this.authenticate(input);
+
+    const user =
+      (await this.userRepository.findByEmail(input.email)) ??
+      User.create({ email: input.email, name: input.email, cognitoId: '' });
+
+    return { ...toSessionTokens(tokens), user: toAuthenticatedUser(user, tokens.groups) };
+  }
+
+  private async authenticate(input: LoginInput): Promise<AuthTokens> {
     const { email, password, newPassword } = input;
     const status = await this.identityProvider.getUserStatus(email);
 

@@ -1,15 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { User } from '../../../users/domain/entities/user.entity';
 import { type IUserRepository, USER_REPOSITORY } from '../../../users/domain/ports/user.repository';
-import { AuthInternalError } from '../../domain/errors/auth.error';
+import { AuthInternalError, EmailAlreadyRegisteredError } from '../../domain/errors/auth.error';
 import {
   IDENTITY_PROVIDER,
   type IIdentityProvider,
 } from '../../domain/ports/identity-provider.port';
 import type { MessageOutput, RegisterInput } from '../dto/auth.dto';
 
-// Registers a user: creates it in the identity provider first, then persists a
-// local record. If persistence fails, the provider user is rolled back.
+
 @Injectable()
 export class RegisterUseCase {
   private readonly logger = new Logger(RegisterUseCase.name);
@@ -22,6 +21,11 @@ export class RegisterUseCase {
   ) {}
 
   async execute(input: RegisterInput): Promise<MessageOutput> {
+
+    if (await this.userRepository.findByEmail(input.email)) {
+      throw new EmailAlreadyRegisteredError();
+    }
+
     const { providerId } = await this.identityProvider.createUser({
       email: input.email,
       name: input.name,

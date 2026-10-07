@@ -21,6 +21,11 @@ export class TypeOrmUserRepository implements IUserRepository {
     return toDomain(saved);
   }
 
+  async update(user: User): Promise<User> {
+    await this.users.update({ id: user.id }, toPersistence(user));
+    return user;
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     const row = await this.users.findOne({ where: { email } });
     return row === null ? null : toDomain(row);

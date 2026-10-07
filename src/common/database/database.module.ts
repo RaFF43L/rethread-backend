@@ -15,6 +15,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
             `${__dirname}/../../modules/**/entities/*.entity{.ts,.js}`,
             `${__dirname}/../../modules/**/infra/database/typeorm/*.schema{.ts,.js}`,
           ],
+          // The production image only ships compiled code, so pending migrations
+          // are applied on boot instead of through the ts-node CLI.
+          migrations: [`${__dirname}/migrations/*{.ts,.js}`],
+          migrationsTableName: 'migrations',
+          migrationsRun: config.get<string>('DB_MIGRATIONS_RUN') !== 'false',
           synchronize:
             config.get<string>('DB_SYNCHRONIZE') === 'true' ||
             config.get<string>('NODE_ENV') !== 'production',

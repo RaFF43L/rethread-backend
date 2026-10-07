@@ -4,4 +4,5 @@ export interface AuthTokens {
   idToken: string | undefined;
   refreshToken: string | undefined;
   expiresIn: number | undefined;
+  groups: string[];
 }

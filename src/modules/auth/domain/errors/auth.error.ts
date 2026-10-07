@@ -99,6 +99,22 @@ export class SessionExpiredError extends AppError {
   }
 }
 
+export class InvalidAuthorizationCodeError extends AppError {
+  readonly statusCode = 400;
+  readonly code = 'INVALID_AUTHORIZATION_CODE';
+  constructor() {
+    super('Authorization code is invalid, expired or was already used.');
+  }
+}
+
+export class FederatedEmailConflictError extends AppError {
+  readonly statusCode = 409;
+  readonly code = 'FEDERATED_EMAIL_CONFLICT';
+  constructor() {
+    super('This email is already registered with a password. Sign in with email and password.');
+  }
+}
+
 export class AuthInternalError extends AppError {
   readonly statusCode = 500;
   readonly code = 'AUTH_INTERNAL_ERROR';

@@ -10,6 +10,8 @@ describe('AuthController', () => {
   const resetPasswordUseCase = { execute: jest.fn() };
   const refreshTokenUseCase = { execute: jest.fn() };
   const logoutUseCase = { execute: jest.fn() };
+  const getGoogleAuthorizationUrlUseCase = { execute: jest.fn() };
+  const googleSignInUseCase = { execute: jest.fn() };
 
   const controller = new AuthController(
     registerUseCase as never,
@@ -19,6 +21,8 @@ describe('AuthController', () => {
     resetPasswordUseCase as never,
     refreshTokenUseCase as never,
     logoutUseCase as never,
+    getGoogleAuthorizationUrlUseCase as never,
+    googleSignInUseCase as never,
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -45,6 +49,32 @@ describe('AuthController', () => {
     const dto = { refreshToken: 'rt' };
     void controller.logout(dto);
     expect(logoutUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates googleAuthorizationUrl', () => {
+    void controller.googleAuthorizationUrl();
+    expect(getGoogleAuthorizationUrlUseCase.execute).toHaveBeenCalled();
+  });
+
+  it('delegates googleSignIn with the dto', () => {
+    const dto = { code: 'auth-code' };
+    void controller.googleSignIn(dto);
+    expect(googleSignInUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates googleSignInRedirect with the code from the query', () => {
+    void controller.googleSignInRedirect({ code: 'auth-code', state: 's' });
+    expect(googleSignInUseCase.execute).toHaveBeenCalledWith({ code: 'auth-code' });
+  });
+
+  it('rejects googleSignInRedirect when the provider returns an error', () => {
+    expect(() =>
+      controller.googleSignInRedirect({
+        error: 'invalid_request',
+        error_description: 'invalid_scope',
+      }),
+    ).toThrow('invalid_scope');
+    expect(googleSignInUseCase.execute).not.toHaveBeenCalled();
   });
 
   it('delegates confirmSignUp with the dto', () => {

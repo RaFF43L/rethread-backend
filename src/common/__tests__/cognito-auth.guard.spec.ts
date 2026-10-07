@@ -1,4 +1,4 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -30,10 +30,21 @@ const mockIdentityProvider = {
   isAccessTokenActive: jest.fn(),
 };
 
-const accessPayload = { sub: 'user-id', token_use: 'access', client_id: 'test-client' };
+const accessPayload = {
+  sub: 'user-id',
+  token_use: 'access',
+  client_id: 'test-client',
+  'cognito:groups': ['@admin'],
+};
 
-const makeContext = (token?: string, isPublic?: boolean): ExecutionContext => {
-  mockReflector.getAllAndOverride.mockReturnValue(isPublic ?? false);
+const makeContext = (
+  token?: string,
+  isPublic?: boolean,
+  isAnyAuthenticated?: boolean,
+): ExecutionContext => {
+  mockReflector.getAllAndOverride.mockImplementation((key: string) =>
+    key === IS_PUBLIC_KEY ? (isPublic ?? false) : (isAnyAuthenticated ?? false),
+  );
   return {
     getHandler: jest.fn(),
     getClass: jest.fn(),
@@ -96,6 +107,29 @@ describe('CognitoAuthGuard', () => {
     });
     const ctx = makeContext('other.jwt.token');
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should forbid a signed-in user outside the admin group', async () => {
+    (jwtVerify as jest.Mock).mockResolvedValue({
+      payload: { ...accessPayload, 'cognito:groups': ['us-east-1_TestPool_Google'] },
+    });
+    const ctx = makeContext('user.jwt.token');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should forbid a token without groups', async () => {
+    const { 'cognito:groups': _groups, ...withoutGroups } = accessPayload;
+    (jwtVerify as jest.Mock).mockResolvedValue({ payload: withoutGroups });
+    const ctx = makeContext('user.jwt.token');
+    await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should allow a non-admin user on @AnyAuthenticated routes', async () => {
+    (jwtVerify as jest.Mock).mockResolvedValue({
+      payload: { ...accessPayload, 'cognito:groups': [] },
+    });
+    const ctx = makeContext('user.jwt.token', false, true);
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
   });
 
   it('should reject a revoked access token (after logout)', async () => {

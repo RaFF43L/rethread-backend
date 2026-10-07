@@ -9,6 +9,8 @@ import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.u
 import { ResetPasswordUseCase } from './application/use-cases/reset-password.usecase';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.usecase';
 import { LogoutUseCase } from './application/use-cases/logout.usecase';
+import { GetGoogleAuthorizationUrlUseCase } from './application/use-cases/get-google-authorization-url.usecase';
+import { GoogleSignInUseCase } from './application/use-cases/google-sign-in.usecase';
 import { AuthController } from './http/auth.controller';
 
 const useCases = [
@@ -19,12 +21,10 @@ const useCases = [
   ResetPasswordUseCase,
   RefreshTokenUseCase,
   LogoutUseCase,
+  GetGoogleAuthorizationUrlUseCase,
+  GoogleSignInUseCase,
 ];
 
-// Composition root for the auth module: binds the identity provider port to the
-// Cognito adapter and registers the authentication use cases. The user
-// repository port is provided by UsersModule. The identity provider is exported
-// so the global auth guard can check token revocation.
 @Module({
   imports: [UsersModule],
   controllers: [AuthController],

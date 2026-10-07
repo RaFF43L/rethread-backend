@@ -13,6 +13,25 @@ export interface CreateProviderUserResult {
   readonly providerId: string;
 }
 
+export type FederatedProvider = 'Google';
+
+// A user signed in through an external provider, as known by the identity
+// provider (the federated user also lives in the user pool).
+export interface FederatedIdentity {
+  // The provider's unique subject id (Cognito "sub").
+  readonly providerId: string;
+  // Provider-generated username (e.g. "google_1234"), required by admin calls.
+  readonly username: string;
+  readonly email: string;
+  readonly name: string;
+  readonly pictureUrl: string | null;
+}
+
+export interface FederatedSession {
+  readonly tokens: AuthTokens;
+  readonly identity: FederatedIdentity;
+}
+
 // Known account lifecycle states relevant to the login flow.
 export type ProviderUserStatus =
   | 'CONFIRMED'
@@ -25,7 +44,7 @@ export type ProviderUserStatus =
 // SDK commands, error translation) live in the infra adapter.
 export interface IIdentityProvider {
   createUser(input: CreateProviderUserInput): Promise<CreateProviderUserResult>;
-  deleteUser(email: string): Promise<void>;
+  deleteUser(username: string): Promise<void>;
   getUserStatus(email: string): Promise<ProviderUserStatus>;
   authenticate(email: string, password: string): Promise<AuthTokens>;
   respondToNewPasswordChallenge(
@@ -44,4 +63,10 @@ export interface IIdentityProvider {
   // Asks the provider whether the access token is still active (not revoked
   // by logout/global sign-out and the user still exists/is enabled).
   isAccessTokenActive(accessToken: string): Promise<boolean>;
+  // URL of the provider's hosted sign-in that redirects straight to the
+  // external provider. `state` is echoed back to the redirect URI (CSRF check).
+  getFederatedAuthorizationUrl(provider: FederatedProvider, state: string): string;
+  // Exchanges the authorization code received on the redirect URI for tokens
+  // and the signed-in user's identity.
+  exchangeAuthorizationCode(code: string): Promise<FederatedSession>;
 }

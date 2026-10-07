@@ -22,6 +22,9 @@ export class UserSchema {
   @Column({ name: 'cognito_id', unique: true })
   cognitoId!: string;
 
+  @Column({ name: 'picture_url', type: 'varchar', nullable: true })
+  pictureUrl!: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
