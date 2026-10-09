@@ -27,6 +27,13 @@ export class FakeProductRepository implements IProductRepository {
     return Promise.resolve(product);
   }
 
+  async updateWithLock(id: number, change: (product: Product) => void): Promise<Product | null> {
+    const product = this.products.find((p) => p.id === id);
+    if (product === undefined) return null;
+    change(product);
+    return product;
+  }
+
   softRemove(product: Product): Promise<void> {
     const index = this.products.findIndex((p) => p.id === product.id);
     if (index >= 0) {
@@ -46,6 +53,12 @@ export class FakeProductRepository implements IProductRepository {
   findByCodigoIdentificacao(codigoIdentificacao: string): Promise<Product | null> {
     return Promise.resolve(
       this.products.find((p) => p.codigoIdentificacao === codigoIdentificacao) ?? null,
+    );
+  }
+
+  findByCodigosIdentificacao(codigosIdentificacao: string[]): Promise<Product[]> {
+    return Promise.resolve(
+      this.products.filter((p) => codigosIdentificacao.includes(p.codigoIdentificacao)),
     );
   }
 

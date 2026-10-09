@@ -14,16 +14,15 @@ export class SellProductUseCase {
   ) {}
 
   async execute(id: number): Promise<ProductOutput> {
-    const product = await this.productRepository.findById(id);
-    if (product === null) {
+    const saved = await this.productRepository.updateWithLock(id, (product) => {
+      if (product.isSold) {
+        throw new ProductAlreadySoldError();
+      }
+      product.markAsSold();
+    });
+    if (saved === null) {
       throw new ProductNotFoundError();
     }
-    if (product.isSold) {
-      throw new ProductAlreadySoldError();
-    }
-
-    product.markAsSold();
-    const saved = await this.productRepository.save(product);
     return this.presenter.toOutput(saved);
   }
 }

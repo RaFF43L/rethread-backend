@@ -58,6 +58,9 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       DB_NAME: rethread
+      AI_AGENT_URL: http://host.docker.internal:8000
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     depends_on:
       db:
         condition: service_healthy

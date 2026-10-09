@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { CreateProductUseCase } from '../application/use-cases/create-product.usecase';
 import { SellProductUseCase } from '../application/use-cases/sell-product.usecase';
 import { RevertSaleUseCase } from '../application/use-cases/revert-sale.usecase';
@@ -42,12 +43,117 @@ describe('Products use cases', () => {
     return seed;
   };
 
+  const aiAgent = { streamChat: jest.fn(), createItem: jest.fn(), updateItem: jest.fn() };
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+  beforeEach(() => {
+    aiAgent.createItem.mockReset().mockResolvedValue(undefined);
+    aiAgent.updateItem.mockReset().mockResolvedValue(true);
+  });
+
   describe('CreateProductUseCase', () => {
+    it('publishes the created product to the AI agent', async () => {
+      repository = new FakeProductRepository();
+      storage = new FakeFileStorage();
+      presenter = new ProductPresenter(storage);
+      const useCase = new CreateProductUseCase(repository, presenter, storage, aiAgent);
+
+      const result = await useCase.execute({
+        cor: 'preta',
+        marca: 'Levis',
+        descricao: 'Calça jeans reta',
+        preco: 120,
+        category: ProductCategory.CALCA,
+        size: '40',
+      });
+      await flush();
+
+      expect(aiAgent.createItem).toHaveBeenCalledWith({
+        sku: result.product.codigoIdentificacao,
+        title: 'Calça Levis',
+        description: 'Calça jeans reta',
+        category: 'calça',
+        brand: 'Levis',
+        label_size: '40',
+        color: 'preta',
+        price: 120,
+        status: 'active',
+      });
+    });
+
+    it('forwards agent-only attributes without persisting them', async () => {
+      repository = new FakeProductRepository();
+      storage = new FakeFileStorage();
+      presenter = new ProductPresenter(storage);
+      const useCase = new CreateProductUseCase(repository, presenter, storage, aiAgent);
+
+      const result = await useCase.execute({
+        cor: 'preta',
+        marca: 'Levis',
+        descricao: 'Calça jeans reta',
+        preco: 120,
+        category: ProductCategory.CALCA,
+        size: '40',
+        title: 'Levis 501 anos 90',
+        department: 'feminino',
+        era: 'anos 90',
+        sizeRegion: 'BR',
+        fabric: 'jeans',
+        stretch: 'low',
+        styleTags: ['vintage'],
+        occasions: ['dia a dia'],
+        condition: 'ótimo estado',
+        notes: 'Sem defeitos',
+        measurements: { waist: 78, inseam: 80 },
+      });
+      await flush();
+
+      expect(aiAgent.createItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Levis 501 anos 90',
+          department: 'feminino',
+          era: 'anos 90',
+          size_region: 'BR',
+          fabric: 'jeans',
+          stretch: 'low',
+          style_tags: ['vintage'],
+          occasions: ['dia a dia'],
+          condition: 'ótimo estado',
+          notes: 'Sem defeitos',
+          measurements: { waist: 78, inseam: 80 },
+        }),
+      );
+      expect(result.product).not.toHaveProperty('title');
+      expect(result.product).not.toHaveProperty('measurements');
+    });
+
+    it('still creates the product when the AI agent fails', async () => {
+      aiAgent.createItem.mockRejectedValue(new Error('agent down'));
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      repository = new FakeProductRepository();
+      storage = new FakeFileStorage();
+      presenter = new ProductPresenter(storage);
+      const useCase = new CreateProductUseCase(repository, presenter, storage, aiAgent);
+
+      const result = await useCase.execute({
+        cor: 'blue',
+        marca: 'Nike',
+        descricao: 'A shoe',
+        preco: 199.99,
+        category: ProductCategory.SHORT,
+        size: 'M',
+      });
+      await flush();
+
+      await expect(repository.findById(result.product.id)).resolves.not.toBeNull();
+      expect(Logger.prototype.error).toHaveBeenCalled();
+    });
+
     it('creates an available product and resolves image URLs (none yet)', async () => {
       repository = new FakeProductRepository();
       storage = new FakeFileStorage();
       presenter = new ProductPresenter(storage);
-      const useCase = new CreateProductUseCase(repository, presenter, storage);
+      const useCase = new CreateProductUseCase(repository, presenter, storage, aiAgent);
 
       const result = await useCase.execute({
         cor: 'blue',
@@ -70,7 +176,7 @@ describe('Products use cases', () => {
       repository = new FakeProductRepository();
       storage = new FakeFileStorage();
       presenter = new ProductPresenter(storage);
-      const useCase = new CreateProductUseCase(repository, presenter, storage);
+      const useCase = new CreateProductUseCase(repository, presenter, storage, aiAgent);
 
       const result = await useCase.execute({
         cor: 'blue',
@@ -153,9 +259,72 @@ describe('Products use cases', () => {
   });
 
   describe('UpdateProductUseCase', () => {
+    it('sends only the changed fields to the AI agent, by SKU', async () => {
+      const product = setup();
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
+
+      await useCase.execute(1, {
+        preco: 89.9,
+        category: ProductCategory.VESTIDO,
+        styleTags: ['boho'],
+        measurements: { waist: 70 },
+      });
+      await flush();
+
+      expect(aiAgent.updateItem).toHaveBeenCalledWith(product.codigoIdentificacao, {
+        price: 89.9,
+        category: 'vestido',
+        style_tags: ['boho'],
+        measurements: { waist: 70 },
+      });
+      expect(aiAgent.createItem).not.toHaveBeenCalled();
+    });
+
+    it('creates the item in the agent when it does not exist there yet', async () => {
+      const product = setup();
+      aiAgent.updateItem.mockResolvedValue(false);
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
+
+      await useCase.execute(1, { preco: 89.9, fabric: 'linho' });
+      await flush();
+
+      expect(aiAgent.createItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sku: product.codigoIdentificacao,
+          price: 89.9,
+          fabric: 'linho',
+          brand: product.marca,
+          status: 'active',
+        }),
+      );
+    });
+
+    it('skips the agent when only media changed', async () => {
+      setup();
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
+
+      await useCase.execute(1, {}, [uploadable('new.jpg')]);
+      await flush();
+
+      expect(aiAgent.updateItem).not.toHaveBeenCalled();
+    });
+
+    it('still updates the product when the AI agent fails', async () => {
+      setup();
+      aiAgent.updateItem.mockRejectedValue(new Error('agent down'));
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
+
+      const result = await useCase.execute(1, { preco: 10 });
+      await flush();
+
+      expect(result.preco).toBe(10);
+      expect(Logger.prototype.error).toHaveBeenCalled();
+    });
+
     it('applies only the provided fields', async () => {
       setup();
-      const useCase = new UpdateProductUseCase(repository, storage, presenter);
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
 
       const result = await useCase.execute(1, { preco: 249.99, size: 'G' });
 
@@ -166,7 +335,7 @@ describe('Products use cases', () => {
 
     it('uploads new images and appends them to the product', async () => {
       setup(buildProduct({ imageKeys: [] }));
-      const useCase = new UpdateProductUseCase(repository, storage, presenter);
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
 
       const result = await useCase.execute(1, {}, [uploadable('new1.jpg'), uploadable('new2.jpg')]);
 
@@ -177,7 +346,7 @@ describe('Products use cases', () => {
 
     it('rejects when the product does not exist', async () => {
       setup();
-      const useCase = new UpdateProductUseCase(repository, storage, presenter);
+      const useCase = new UpdateProductUseCase(repository, storage, presenter, aiAgent);
 
       await expect(useCase.execute(999, { preco: 10 })).rejects.toBeInstanceOf(
         ProductNotFoundError,

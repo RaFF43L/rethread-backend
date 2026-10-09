@@ -26,6 +26,7 @@
     "migration:show": "cross-env TS_NODE_PROJECT=tsconfig.migrations.json typeorm-ts-node-commonjs migration:show -d src/common/database/data-source.ts"
   },
   "dependencies": {
+    "@abacatepay/sdk": "^2.0.3",
     "@aws-sdk/client-cognito-identity-provider": "^3.1006.0",
     "@aws-sdk/client-s3": "^3.1006.0",
     "@aws-sdk/s3-request-presigner": "^3.1006.0",

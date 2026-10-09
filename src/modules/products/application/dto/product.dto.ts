@@ -1,3 +1,8 @@
+import type {
+  AgentDepartment,
+  AgentStretch,
+  Measurements,
+} from '../../../ai/domain/ports/ai-agent.port';
 import type { ProductCategory, ProductStatus } from '../../domain/entities/product.entity';
 
 // Application-layer input/output contracts. Pure TypeScript: no framework or
@@ -8,7 +13,22 @@ export interface CreateMediaInput {
   readonly fileType: string;
 }
 
-export interface CreateProductInput {
+// Sent only to the AI agent; not persisted.
+export interface AgentAttributesInput {
+  readonly title?: string;
+  readonly department?: AgentDepartment;
+  readonly era?: string;
+  readonly sizeRegion?: string;
+  readonly fabric?: string;
+  readonly stretch?: AgentStretch;
+  readonly styleTags?: string[];
+  readonly occasions?: string[];
+  readonly condition?: string;
+  readonly notes?: string;
+  readonly measurements?: Measurements;
+}
+
+export interface CreateProductInput extends AgentAttributesInput {
   readonly cor: string;
   readonly marca: string;
   readonly descricao: string;
@@ -23,7 +43,7 @@ export interface CreateProductResult {
   readonly presignedUrls?: PresignedUrlOutput[];
 }
 
-export interface UpdateProductInput {
+export interface UpdateProductInput extends AgentAttributesInput {
   readonly cor?: string;
   readonly marca?: string;
   readonly descricao?: string;

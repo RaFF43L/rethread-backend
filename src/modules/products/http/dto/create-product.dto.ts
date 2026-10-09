@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductCategory } from '../../domain/entities/product.entity';
+import { AgentAttributesDto } from './agent-attributes.dto';
 
 export class CreateMediaDto {
   @ApiProperty({ example: 'foto-1.jpg' })
@@ -24,7 +25,7 @@ export class CreateMediaDto {
   fileType!: string;
 }
 
-export class CreateProductDto {
+export class CreateProductDto extends AgentAttributesDto {
   @ApiProperty({ example: 'blue' })
   @IsString()
   @IsNotEmpty()

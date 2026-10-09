@@ -11,6 +11,8 @@ import { CognitoAuthGuard } from './common/guards/cognito-auth.guard';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { HealthModule } from './modules/health/health.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
     UsersModule,
     HealthModule,
     FavoritesModule,
+    PaymentsModule,
+    AiModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AppErrorFilter },

@@ -22,6 +22,27 @@ import {
 import { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Public } from '../../../../common/decorators/public.decorator';
 import { ProductCategory, ProductStatus } from '../../domain/entities/product.entity';
+import { CreateProductDto } from '../dto/create-product.dto';
+import { AGENT_DEPARTMENTS, AGENT_STRETCH_LEVELS } from '../../../ai/domain/ports/ai-agent.port';
+
+// In multipart forms, lists and objects go as JSON strings.
+const agentAttributesSchema: Record<string, SchemaObject> = {
+  title: { type: 'string', example: 'Calça jeans reta Levis 501' },
+  department: { type: 'string', enum: [...AGENT_DEPARTMENTS], example: 'feminino' },
+  era: { type: 'string', example: 'anos 90' },
+  sizeRegion: { type: 'string', example: 'BR' },
+  fabric: { type: 'string', example: 'jeans 100% algodão' },
+  stretch: { type: 'string', enum: [...AGENT_STRETCH_LEVELS], example: 'low' },
+  styleTags: { type: 'string', example: '["vintage","minimalista"]', description: 'JSON array' },
+  occasions: { type: 'string', example: '["trabalho"]', description: 'JSON array' },
+  condition: { type: 'string', example: 'ótimo estado' },
+  notes: { type: 'string', example: 'Pequeno desgaste na barra.' },
+  measurements: {
+    type: 'string',
+    example: '{"waist":78,"inseam":80}',
+    description: 'JSON object (cm); merged with the measurements the agent already has',
+  },
+};
 
 const productSchema: SchemaObject = {
   type: 'object',
@@ -120,39 +141,13 @@ export const CreateProductRoute = () =>
       ),
     ),
     ApiOperation({ summary: 'Create a new product' }),
-    ApiConsumes('multipart/form-data'),
-    ApiBody({
-      schema: {
-        type: 'object',
-        required: ['cor', 'marca', 'descricao', 'preco', 'category', 'size', 'images'],
-        properties: {
-          cor: { type: 'string', example: 'blue' },
-          marca: { type: 'string', example: 'Nike' },
-          descricao: { type: 'string', example: 'A great shoe' },
-          preco: { type: 'number', example: 199.99 },
-          category: {
-            type: 'string',
-            enum: Object.values(ProductCategory),
-            example: ProductCategory.CALCA,
-          },
-          size: { type: 'string', example: 'M' },
-          images: {
-            type: 'array',
-            items: { type: 'string', format: 'binary' },
-          },
-          videos: {
-            type: 'array',
-            items: { type: 'string', format: 'binary' },
-            description: 'Product videos (mp4, mov, etc.)',
-          },
-        },
-      },
-    }),
+    ApiConsumes('application/json'),
+    ApiBody({ type: CreateProductDto }),
     ApiResponse({ status: 201, description: 'Product created.', schema: productSchema }),
     ApiResponse({
       status: 400,
-      description: 'Image is required or invalid data.',
-      schema: errorSchema(400, 'At least one product image is required.', 'Bad Request'),
+      description: 'Invalid data.',
+      schema: errorSchema(400, 'Validation failed.', 'Bad Request'),
     }),
     ApiResponse({
       status: 401,
@@ -409,6 +404,7 @@ export const UpdateProductRoute = () =>
             example: ProductCategory.BLUSA,
           },
           size: { type: 'string', example: 'G' },
+          ...agentAttributesSchema,
           images: { type: 'array', items: { type: 'string', format: 'binary' } },
           videos: {
             type: 'array',

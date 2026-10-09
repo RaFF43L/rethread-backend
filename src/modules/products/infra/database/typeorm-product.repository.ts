@@ -47,6 +47,23 @@ export class TypeOrmProductRepository implements IProductRepository {
     return toDomain(await this.reloadWithMedia(saved.id));
   }
 
+  async updateWithLock(id: number, change: (product: Product) => void): Promise<Product | null> {
+    const savedId = await this.products.manager.transaction(async (manager) => {
+      const products = manager.getRepository(ProductSchema);
+      // No media relations here: Postgres rejects FOR UPDATE on the nullable side of an outer join.
+      const row = await products.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (row === null) return null;
+
+      const product = toDomain(row);
+      change(product);
+      products.merge(row, toPersistence(product));
+      await products.save(row);
+      return row.id;
+    });
+
+    return savedId === null ? null : toDomain(await this.reloadWithMedia(savedId));
+  }
+
   async softRemove(product: Product): Promise<void> {
     await this.products.softDelete({ id: product.id });
   }
@@ -68,6 +85,15 @@ export class TypeOrmProductRepository implements IProductRepository {
       relations: MEDIA_RELATIONS,
     });
     return row === null ? null : toDomain(row);
+  }
+
+  async findByCodigosIdentificacao(codigosIdentificacao: string[]): Promise<Product[]> {
+    if (codigosIdentificacao.length === 0) return [];
+    const rows = await this.products.find({
+      where: { codigoIdentificacao: In(codigosIdentificacao) },
+      relations: MEDIA_RELATIONS,
+    });
+    return rows.map(toDomain);
   }
 
   async findPaginated(query: PageQuery): Promise<Page<Product>> {

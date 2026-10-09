@@ -26,10 +26,15 @@ export interface ProductFilter extends PageQuery {
 export interface IProductRepository {
   create(product: Product): Promise<Product>;
   save(product: Product): Promise<Product>;
+  // Applies `change` and saves it in one transaction, holding a row lock (SELECT ... FOR UPDATE)
+  // so concurrent calls run one after the other. Throwing inside `change` rolls back.
+  // Resolves null when the product does not exist.
+  updateWithLock(id: number, change: (product: Product) => void): Promise<Product | null>;
   softRemove(product: Product): Promise<void>;
   findById(id: number): Promise<Product | null>;
   findByIds(ids: number[]): Promise<Product[]>;
   findByCodigoIdentificacao(codigoIdentificacao: string): Promise<Product | null>;
+  findByCodigosIdentificacao(codigosIdentificacao: string[]): Promise<Product[]>;
   findPaginated(query: PageQuery): Promise<Page<Product>>;
   findAvailable(): Promise<Product[]>;
   findAvailablePaginatedByCategory(

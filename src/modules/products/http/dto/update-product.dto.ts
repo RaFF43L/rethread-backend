@@ -2,8 +2,9 @@ import { Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductCategory } from '../../domain/entities/product.entity';
+import { AgentAttributesDto } from './agent-attributes.dto';
 
-export class UpdateProductDto {
+export class UpdateProductDto extends AgentAttributesDto {
   @ApiPropertyOptional({ example: 'red' })
   @IsOptional()
   @IsString()

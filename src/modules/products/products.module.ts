@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { S3Module } from '../../common/services/s3.module';
+import { AiAgentModule } from '../ai/ai-agent.module';
 import { ProductSchema } from './infra/database/typeorm/product.schema';
 import { ProductImageSchema } from './infra/database/typeorm/product-image.schema';
 import { ProductVideoSchema } from './infra/database/typeorm/product-video.schema';
@@ -52,6 +53,7 @@ const useCases = [
   imports: [
     TypeOrmModule.forFeature([ProductSchema, ProductImageSchema, ProductVideoSchema]),
     S3Module,
+    AiAgentModule,
   ],
   controllers: [ProductsController],
   providers: [
