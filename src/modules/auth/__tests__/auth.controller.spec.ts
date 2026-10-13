@@ -12,6 +12,7 @@ describe('AuthController', () => {
   const logoutUseCase = { execute: jest.fn() };
   const getGoogleAuthorizationUrlUseCase = { execute: jest.fn() };
   const googleSignInUseCase = { execute: jest.fn() };
+  const googleRefreshTokenUseCase = { execute: jest.fn() };
 
   const controller = new AuthController(
     registerUseCase as never,
@@ -23,6 +24,7 @@ describe('AuthController', () => {
     logoutUseCase as never,
     getGoogleAuthorizationUrlUseCase as never,
     googleSignInUseCase as never,
+    googleRefreshTokenUseCase as never,
   );
 
   beforeEach(() => jest.clearAllMocks());
@@ -60,6 +62,12 @@ describe('AuthController', () => {
     const dto = { code: 'auth-code' };
     void controller.googleSignIn(dto);
     expect(googleSignInUseCase.execute).toHaveBeenCalledWith(dto);
+  });
+
+  it('delegates googleRefresh with the dto', () => {
+    const dto = { refreshToken: 'rt' };
+    void controller.googleRefresh(dto);
+    expect(googleRefreshTokenUseCase.execute).toHaveBeenCalledWith(dto);
   });
 
   it('delegates googleSignInRedirect with the code from the query', () => {

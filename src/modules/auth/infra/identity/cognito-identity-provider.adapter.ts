@@ -351,26 +351,11 @@ export class CognitoIdentityProvider implements IIdentityProvider {
   }
 
   async exchangeAuthorizationCode(code: string): Promise<FederatedSession> {
-    let response: Response;
-    try {
-      response = await fetch(`${this.oauthDomain()}/oauth2/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          client_id: this.clientId,
-          code,
-          redirect_uri: this.oauthRedirectUri(),
-        }),
-      });
-    } catch {
-      throw new AuthInternalError();
-    }
-
-    const body = (await response.json().catch(() => ({}))) as OAuthTokenResponse;
+    const { response, body } = await this.requestOAuthTokens({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: this.oauthRedirectUri(),
+    });
     if (!response.ok || !body.id_token) {
       if (body.error === 'invalid_grant') throw new InvalidAuthorizationCodeError();
       throw new AuthInternalError();
@@ -386,6 +371,45 @@ export class CognitoIdentityProvider implements IIdentityProvider {
       },
       identity: this.identityFromIdToken(body.id_token),
     };
+  }
+
+  async refreshFederatedSession(refreshToken: string): Promise<AuthTokens> {
+    const { response, body } = await this.requestOAuthTokens({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    });
+    if (!response.ok || !body.access_token) {
+      if (body.error === 'invalid_grant') throw new SessionExpiredError();
+      throw new AuthInternalError();
+    }
+
+    return {
+      accessToken: body.access_token,
+      idToken: body.id_token,
+      refreshToken: body.refresh_token,
+      expiresIn: body.expires_in,
+      groups: groupsFromAccessToken(body.access_token),
+    };
+  }
+
+  private async requestOAuthTokens(
+    params: Record<string, string>,
+  ): Promise<{ response: Response; body: OAuthTokenResponse }> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.oauthDomain()}/oauth2/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+        },
+        body: new URLSearchParams({ client_id: this.clientId, ...params }),
+      });
+    } catch {
+      throw new AuthInternalError();
+    }
+    const body = (await response.json().catch(() => ({}))) as OAuthTokenResponse;
+    return { response, body };
   }
 
   private identityFromIdToken(idToken: string): FederatedIdentity {

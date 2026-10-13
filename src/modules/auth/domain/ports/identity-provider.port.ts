@@ -69,4 +69,7 @@ export interface IIdentityProvider {
   // Exchanges the authorization code received on the redirect URI for tokens
   // and the signed-in user's identity.
   exchangeAuthorizationCode(code: string): Promise<FederatedSession>;
+  // Refresh for federated sessions, whose provider username is not the email.
+  // Fails with SessionExpiredError when the refresh token is expired or revoked.
+  refreshFederatedSession(refreshToken: string): Promise<AuthTokens>;
 }

@@ -8,6 +8,7 @@ import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.usec
 import { LogoutUseCase } from '../application/use-cases/logout.usecase';
 import { GetGoogleAuthorizationUrlUseCase } from '../application/use-cases/get-google-authorization-url.usecase';
 import { GoogleSignInUseCase } from '../application/use-cases/google-sign-in.usecase';
+import { GoogleRefreshTokenUseCase } from '../application/use-cases/google-refresh-token.usecase';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ConfirmSignUpDto } from './dto/confirm-signup.dto';
@@ -17,11 +18,13 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { GoogleSignInDto } from './dto/google-sign-in.dto';
 import { GoogleCallbackQueryDto } from './dto/google-callback-query.dto';
+import { GoogleRefreshTokenDto } from './dto/google-refresh-token.dto';
 import {
   AuthTag,
   ConfirmSignUpRoute,
   ForgotPasswordRoute,
   GoogleAuthorizationUrlRoute,
+  GoogleRefreshTokenRoute,
   GoogleSignInRedirectRoute,
   GoogleSignInRoute,
   LoginRoute,
@@ -45,6 +48,7 @@ export class AuthController {
     private readonly logoutUseCase: LogoutUseCase,
     private readonly getGoogleAuthorizationUrlUseCase: GetGoogleAuthorizationUrlUseCase,
     private readonly googleSignInUseCase: GoogleSignInUseCase,
+    private readonly googleRefreshTokenUseCase: GoogleRefreshTokenUseCase,
   ) {}
 
   @RegisterRoute()
@@ -75,6 +79,11 @@ export class AuthController {
   @GoogleSignInRoute()
   googleSignIn(@Body() dto: GoogleSignInDto) {
     return this.googleSignInUseCase.execute(dto);
+  }
+
+  @GoogleRefreshTokenRoute()
+  googleRefresh(@Body() dto: GoogleRefreshTokenDto) {
+    return this.googleRefreshTokenUseCase.execute(dto);
   }
 
   @GoogleSignInRedirectRoute()

@@ -73,6 +73,16 @@ export const GoogleSignInRoute = () =>
     ApiResponse({ status: 409, description: 'Email already registered with a password.' }),
   );
 
+export const GoogleRefreshTokenRoute = () =>
+  applyDecorators(
+    Post('google/refresh'),
+    HttpCode(HttpStatus.OK),
+    Public(),
+    ApiOperation({ summary: 'Issue new access/id tokens from a Google sign-in refresh token' }),
+    ApiResponse({ status: 200, description: 'Tokens refreshed.' }),
+    ApiResponse({ status: 401, description: 'Refresh token expired or revoked.' }),
+  );
+
 export const GoogleSignInRedirectRoute = () =>
   applyDecorators(
     Get('google/callback'),

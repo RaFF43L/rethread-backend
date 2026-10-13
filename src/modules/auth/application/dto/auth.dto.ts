@@ -33,6 +33,10 @@ export interface RefreshTokenInput {
   readonly refreshToken: string;
 }
 
+export interface FederatedRefreshTokenInput {
+  readonly refreshToken: string;
+}
+
 export interface LogoutInput {
   readonly refreshToken: string;
 }

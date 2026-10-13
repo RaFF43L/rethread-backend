@@ -179,6 +179,13 @@ export class FakeIdentityProvider implements IIdentityProvider {
     return Promise.resolve({ tokens: this.tokens(), identity });
   }
 
+  refreshFederatedSession(refreshToken: string): Promise<AuthTokens> {
+    if (this.revokedTokens.has(refreshToken)) {
+      return Promise.reject(new SessionExpiredError());
+    }
+    return Promise.resolve({ ...this.tokens(), refreshToken: undefined });
+  }
+
   private tokens(): AuthTokens {
     return {
       accessToken: 'access-token',

@@ -11,6 +11,7 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token.useca
 import { LogoutUseCase } from './application/use-cases/logout.usecase';
 import { GetGoogleAuthorizationUrlUseCase } from './application/use-cases/get-google-authorization-url.usecase';
 import { GoogleSignInUseCase } from './application/use-cases/google-sign-in.usecase';
+import { GoogleRefreshTokenUseCase } from './application/use-cases/google-refresh-token.usecase';
 import { AuthController } from './http/auth.controller';
 
 const useCases = [
@@ -23,6 +24,7 @@ const useCases = [
   LogoutUseCase,
   GetGoogleAuthorizationUrlUseCase,
   GoogleSignInUseCase,
+  GoogleRefreshTokenUseCase,
 ];
 
 @Module({

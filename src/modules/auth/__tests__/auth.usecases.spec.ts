@@ -7,6 +7,7 @@ import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.usec
 import { LogoutUseCase } from '../application/use-cases/logout.usecase';
 import { GetGoogleAuthorizationUrlUseCase } from '../application/use-cases/get-google-authorization-url.usecase';
 import { GoogleSignInUseCase } from '../application/use-cases/google-sign-in.usecase';
+import { GoogleRefreshTokenUseCase } from '../application/use-cases/google-refresh-token.usecase';
 import { User } from '../../users/domain/entities/user.entity';
 import {
   AccountNotConfirmedError,
@@ -269,6 +270,26 @@ describe('Auth use cases', () => {
       await expect(
         useCase.execute({ email: 'a@test.com', refreshToken: 'rt-1' }),
       ).rejects.toBeInstanceOf(SessionExpiredError);
+    });
+  });
+
+  describe('GoogleRefreshTokenUseCase', () => {
+    it('returns new tokens and keeps the refresh token when none is rotated', async () => {
+      const useCase = new GoogleRefreshTokenUseCase(provider);
+
+      const tokens = await useCase.execute({ refreshToken: 'rt-1' });
+
+      expect(tokens.accessToken).toBe('access-token');
+      expect(tokens.refreshToken).toBe('rt-1');
+    });
+
+    it('rejects a revoked refresh token', async () => {
+      provider.revokedTokens.add('rt-1');
+      const useCase = new GoogleRefreshTokenUseCase(provider);
+
+      await expect(useCase.execute({ refreshToken: 'rt-1' })).rejects.toBeInstanceOf(
+        SessionExpiredError,
+      );
     });
   });
 
