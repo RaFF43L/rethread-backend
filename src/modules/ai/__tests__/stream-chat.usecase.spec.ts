@@ -2,6 +2,8 @@ import { ProductPresenter } from '../../products/application/product.presenter';
 import { FakeFileStorage } from '../../products/__tests__/fake-file-storage';
 import { FakeProductRepository } from '../../products/__tests__/fake-product.repository';
 import { buildProduct } from '../../products/__tests__/product.builder';
+import { ChatItemsResolver } from '../application/chat-items.resolver';
+import { ChatSessionResolver } from '../application/chat-session.resolver';
 import { StreamChatUseCase } from '../application/use-cases/stream-chat.usecase';
 import { ChatSession } from '../domain/entities/chat-session.entity';
 import { ChatSessionNotFoundError } from '../domain/errors/ai.error';
@@ -35,7 +37,11 @@ describe('StreamChatUseCase', () => {
         })();
       },
     };
-    return new StreamChatUseCase(aiAgent, repository, presenter, sessions);
+    return new StreamChatUseCase(
+      aiAgent,
+      new ChatSessionResolver(sessions),
+      new ChatItemsResolver(repository, presenter),
+    );
   };
 
   const signal = new AbortController().signal;
