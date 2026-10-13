@@ -19,6 +19,11 @@ function fakeResponse() {
 describe('AiController', () => {
   const dto = { message: 'veste 40?', item_id: 'item-1' };
   const userId = 1;
+  const createVoiceToken = { execute: jest.fn() };
+  const resolveChatItems = { execute: jest.fn() };
+
+  const controller = (streamChat: unknown = { execute: jest.fn() }) =>
+    new AiController(streamChat as never, createVoiceToken as never, resolveChatItems as never);
 
   it('relays agent events as SSE frames', async () => {
     async function* events(): AsyncIterable<AgentEvent> {
@@ -28,7 +33,7 @@ describe('AiController', () => {
     const streamChat = { execute: jest.fn().mockResolvedValue(events()) };
     const res = fakeResponse();
 
-    await new AiController(streamChat as never).chat(dto, userId, res as unknown as Response);
+    await controller(streamChat).chat(dto, userId, res as unknown as Response);
 
     expect(streamChat.execute).toHaveBeenCalledWith({ ...dto, userId }, expect.any(AbortSignal));
     expect(res.set).toHaveBeenCalledWith(
@@ -49,7 +54,7 @@ describe('AiController', () => {
     const streamChat = { execute: jest.fn().mockResolvedValue(events()) };
     const res = fakeResponse();
 
-    await new AiController(streamChat as never).chat(dto, userId, res as unknown as Response);
+    await controller(streamChat).chat(dto, userId, res as unknown as Response);
 
     expect(res.chunks.at(-1)).toContain('event: error');
     expect(res.end).toHaveBeenCalled();
@@ -65,9 +70,23 @@ describe('AiController', () => {
     };
     const res = fakeResponse();
 
-    await new AiController(streamChat as never).chat(dto, userId, res as unknown as Response);
+    await controller(streamChat).chat(dto, userId, res as unknown as Response);
     res.emit('close');
 
     expect(signal.aborted).toBe(true);
+  });
+
+  it('issues a voice token for the signed-in user', () => {
+    const body = { session_id: '6f1c2d4e-8a9b-4c3d-9e2f-1a2b3c4d5e6f', item_id: 'item-1' };
+
+    void controller().voiceToken(body, userId);
+
+    expect(createVoiceToken.execute).toHaveBeenCalledWith({ ...body, userId });
+  });
+
+  it('delegates SKU resolution', () => {
+    void controller().items({ skus: ['sku-1'] });
+
+    expect(resolveChatItems.execute).toHaveBeenCalledWith({ skus: ['sku-1'] });
   });
 });

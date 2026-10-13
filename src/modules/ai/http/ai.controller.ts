@@ -1,9 +1,18 @@
 import { Body, Controller, Logger, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUserId } from '../../users/http/decorators/current-user-id.decorator';
+import { CreateVoiceTokenUseCase } from '../application/use-cases/create-voice-token.usecase';
+import { ResolveChatItemsUseCase } from '../application/use-cases/resolve-chat-items.usecase';
 import { StreamChatUseCase } from '../application/use-cases/stream-chat.usecase';
-import { AiTag, ChatRoute } from './decorators/ai-routes.decorator';
+import {
+  AiTag,
+  ChatItemsRoute,
+  ChatRoute,
+  VoiceTokenRoute,
+} from './decorators/ai-routes.decorator';
 import { ChatDto } from './dto/chat.dto';
+import { ChatItemsDto } from './dto/chat-items.dto';
+import { VoiceTokenDto } from './dto/voice-token.dto';
 import { formatSseEvent } from './sse';
 
 @AiTag()
@@ -11,7 +20,11 @@ import { formatSseEvent } from './sse';
 export class AiController {
   private readonly logger = new Logger(AiController.name);
 
-  constructor(private readonly streamChat: StreamChatUseCase) {}
+  constructor(
+    private readonly streamChat: StreamChatUseCase,
+    private readonly createVoiceToken: CreateVoiceTokenUseCase,
+    private readonly resolveChatItems: ResolveChatItemsUseCase,
+  ) {}
 
   @ChatRoute()
   async chat(
@@ -49,5 +62,15 @@ export class AiController {
     } finally {
       res.end();
     }
+  }
+
+  @VoiceTokenRoute()
+  voiceToken(@Body() dto: VoiceTokenDto, @CurrentUserId() userId: number) {
+    return this.createVoiceToken.execute({ ...dto, userId });
+  }
+
+  @ChatItemsRoute()
+  items(@Body() dto: ChatItemsDto) {
+    return this.resolveChatItems.execute(dto);
   }
 }
